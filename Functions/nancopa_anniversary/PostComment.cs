@@ -44,7 +44,7 @@ public class PostComment
 
                     return new MultiResponse
                     {
-                        HttpResponse = new OkObjectResult(new { id = comment.Id, message = "Comment posted successfully" }),
+                        HttpResponse = new OkObjectResult(new { id = comment.Id, message = "投稿ありがとう！" }),
                         CosmosDocument = comment
                     };
                 }
