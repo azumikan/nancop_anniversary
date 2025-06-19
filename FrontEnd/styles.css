@@ -102,6 +102,7 @@ body {
     word-wrap: break-word;
     position: relative;
     animation: slideIn 0.3s ease-out;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
 }
 
 /* タイムスタンプスタイル */
@@ -356,6 +357,17 @@ body {
     width: 10px;
     height: 10px;
     pointer-events: none;
+}
+
+/* スパークル効果のスタイル */
+.sparkle-particle {
+    position: absolute;
+    font-size: 16px;
+    user-select: none;
+    pointer-events: none;
+    z-index: 1000;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+    filter: drop-shadow(0 0 3px rgba(255, 215, 0, 0.6));
 }
 
 /* アニメーション */
