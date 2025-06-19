@@ -8,11 +8,7 @@ const config = {
         apiBaseUrl: 'https://func-nancopa.azurewebsites.net/api',
         apiKey: '' // 本番環境のAPIキー
     },
-    // Azure Static Web Appsでの本番環境（APIが同じドメインの場合）
-    staticWebApp: {
-        apiBaseUrl: '/api',
-        apiKey: '' // Azure Static Web Appsでは不要
-    }
+
 };
 
 // 現在の環境を判定
@@ -20,8 +16,6 @@ function getEnvironment() {
     const hostname = window.location.hostname;
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
         return 'development';
-    } else if (hostname.includes('azurestaticapps.net')) {
-        return 'staticWebApp';
     } else {
         return 'production';
     }

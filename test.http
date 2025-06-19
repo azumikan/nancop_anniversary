@@ -4,7 +4,13 @@
 GET http://localhost:7028/api/PostComment
 
 ###
-
+POST https://func-nancopa.azurewebsites.net/api/PostComment
+Content-Type: application/json
+ 
+{
+  "message": "こんにちは、みんな！ by 酒見"
+}
+###
 ### 
 
 # POST request to create a new comment
@@ -54,3 +60,16 @@ Content-Type: application/json
 {
   "message": "This JSON is invalid because of missing quote
 }
+
+
+### GetComments Function Tests
+
+# GET request to retrieve latest 100 comments
+GET http://localhost:7028/api/GetComments
+
+###
+
+# GET request to Azure Functions (when deployed)
+GET https://func-nancopa.azurewebsites.net/api/GetComments
+
+###
