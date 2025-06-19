@@ -15,12 +15,12 @@ public class PostComment
     {
         _logger = logger;
     }    
-    
-    
-    [Function("PostComment")]
-    public async Task<MultiResponse> Run([HttpTrigger(AuthorizationLevel.Function, "get", "post")] HttpRequest req)
+        [Function("PostComment")]
+    public async Task<MultiResponse> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", "options")] HttpRequest req)
     {
         _logger.LogInformation("C# HTTP trigger function processed a request.");
+
+        
 
         // POSTリクエストの場合、リクエストボディからメッセージを取得
         if (req.Method == "POST")
@@ -42,9 +42,11 @@ public class PostComment
 
                     _logger.LogInformation($"Creating comment: {comment.Message}");
 
+                    var successResponse = new OkObjectResult(new { id = comment.Id, message = "投稿ありがとう！" });
+                    
                     return new MultiResponse
                     {
-                        HttpResponse = new OkObjectResult(new { id = comment.Id, message = "投稿ありがとう！" }),
+                        HttpResponse = successResponse,
                         CosmosDocument = comment
                     };
                 }
