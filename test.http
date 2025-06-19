@@ -1,0 +1,56 @@
+### PostComment Function Tests
+
+# GET request to test the function
+GET http://localhost:7028/api/PostComment
+
+###
+
+### 
+
+# POST request to create a new comment
+POST http://localhost:7028/api/PostComment
+Content-Type: application/json
+
+{
+  "message": "こんにちは、みんな！ by 酒見"
+}
+
+###
+
+# POST request with English message
+POST http://localhost:7028/api/PostComment
+Content-Type: application/json
+
+{
+  "message": "Hello everyone! This is a test message."
+}
+
+###
+
+# POST request with empty message (should return error)
+POST http://localhost:7028/api/PostComment
+Content-Type: application/json
+
+{
+  "message": ""
+}
+
+###
+
+# POST request without message field (should return error)
+POST http://localhost:7028/api/PostComment
+Content-Type: application/json
+
+{
+  "text": "This should fail because it uses 'text' instead of 'message'"
+}
+
+###
+
+# POST request with invalid JSON (should return error)
+POST http://localhost:7028/api/PostComment
+Content-Type: application/json
+
+{
+  "message": "This JSON is invalid because of missing quote
+}

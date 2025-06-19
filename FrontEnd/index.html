@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nancop Anniversary</title>    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="config.js"></script>
+</head>
+<body>
+    <div class="app-container">        <header class="header">
+            <h1>🎉 Nancop Anniversary 🎉</h1>
+            <div class="status-info" id="statusInfo">
+                <span id="environmentStatus">環境: 読み込み中...</span>
+                <span id="apiStatus">API: 確認中...</span>
+            </div>
+        </header>
+        
+        <main class="chat-container">
+            <div class="messages-container" id="messagesContainer">
+                <!-- メッセージがここに表示されます -->
+            </div>
+            
+            <div class="celebration-buttons">
+                <button class="celebration-btn orange" onclick="sendCelebration('おめでとー')">
+                    🎊 おめでとー
+                </button>
+                <button class="celebration-btn yellow" onclick="sendCelebration('おめえと')">
+                    ✨ おめえと
+                </button>
+                <button class="celebration-btn gradient" onclick="sendCelebration('おめでとう！')">
+                    🎉 おめでとう！
+                </button>
+            </div>
+            
+            <div class="gift-section">
+                <button class="gift-btn" onclick="sendGift()">
+                    🎁 ギフト爆弾！
+                </button>
+            </div>
+        </main>
+        
+        <footer class="input-section">
+            <div class="input-container">
+                <input type="text" id="messageInput" placeholder="コメントを入力..." maxlength="500">
+                <button class="send-btn" onclick="sendMessage()">
+                    送信
+                </button>
+            </div>
+        </footer>
+          <!-- エフェクト用のキャンバス -->
+        <div class="effects-canvas" id="effectsCanvas"></div>
+        
+        <!-- 開発者向けデバッグパネル -->
+        <div class="debug-panel" id="debugPanel">
+            <div class="debug-header" onclick="toggleDebugPanel()">
+                🔧 Debug Info
+            </div>
+            <div class="debug-content" id="debugContent">
+                <div class="debug-section">
+                    <h4>Environment</h4>
+                    <p id="debugEnv">-</p>
+                </div>
+                <div class="debug-section">
+                    <h4>API Configuration</h4>
+                    <p id="debugApi">-</p>
+                </div>
+                <div class="debug-section">
+                    <h4>Last Request</h4>
+                    <pre id="debugRequest">No requests yet</pre>
+                </div>
+                <div class="debug-section">
+                    <h4>Last Response</h4>
+                    <pre id="debugResponse">No responses yet</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>

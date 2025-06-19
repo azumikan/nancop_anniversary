@@ -1,0 +1,11 @@
+{
+  "recommendations": [
+    "ms-vscode.azure-static-web-apps-cli",
+    "ms-azuretools.vscode-azurefunctions",
+    "ms-dotnettools.csharp",
+    "ms-dotnettools.vscode-dotnet-runtime",
+    "ritwickdey.liveserver",
+    "humao.rest-client",
+    "ms-vscode.vscode-json"
+  ]
+}
