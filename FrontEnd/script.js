@@ -30,8 +30,8 @@ function initializeApp() {
     // APIの疎通確認
     checkApiConnection();
     
-    // 初期メッセージを表示
-    displayWelcomeMessage();
+    // 既存のメッセージを取得して表示
+    loadExistingMessages();
     
     // GSAP初期設定
     gsap.set('.celebration-btn', { scale: 1 });
@@ -556,3 +556,122 @@ window.addEventListener('load', () => {
         debugPanel.style.display = 'none';
     }
 });
+
+// 既存のメッセージを取得して表示する関数
+async function loadExistingMessages() {
+    try {
+        // URL構築（APIキーがある場合はクエリパラメータとして追加）
+        let url = `${API_BASE_URL}/GetComments`;
+        if (API_KEY) {
+            url += `?code=${encodeURIComponent(API_KEY)}`;
+        }
+        
+        console.log('既存メッセージ取得中:', url);
+        
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            const comments = await response.json();
+            console.log('取得したメッセージ:', comments);
+            
+            // メッセージがある場合は表示
+            if (comments && Array.isArray(comments) && comments.length > 0) {
+                displayExistingMessages(comments);
+            } else {
+                // メッセージがない場合はウェルカムメッセージを表示
+                displayWelcomeMessage();
+            }
+        } else {
+            console.error('メッセージ取得エラー:', response.status, response.statusText);
+            // エラーの場合はウェルカムメッセージを表示
+            displayWelcomeMessage();
+        }
+    } catch (error) {
+        console.error('メッセージ取得エラー:', error);
+        // エラーの場合はウェルカムメッセージを表示
+        displayWelcomeMessage();
+    }
+}
+
+// 既存メッセージを表示する関数
+function displayExistingMessages(comments) {
+    // まずウェルカムメッセージを表示
+    const welcomeMessage = createMessageBubble('🎉 Nancop Anniversary へようこそ！', 'celebration');
+    messagesContainer.appendChild(welcomeMessage);
+    
+    // ウェルカムメッセージのアニメーション
+    gsap.fromTo(welcomeMessage, 
+        { opacity: 0, y: 50, scale: 0.8 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.6, ease: "back.out(1.7)" }
+    );
+    
+    // 既存のコメントを表示（新しい順なので、そのまま表示）
+    comments.forEach((comment, index) => {
+        setTimeout(() => {
+            const messageType = comment.message.includes('🎉') || comment.message.includes('🎊') || 
+                               comment.message.includes('おめでと') ? 'celebration' : 'user';
+            
+            const messageBubble = createMessageBubble(comment.message, messageType);
+            
+            // タイムスタンプがある場合は表示
+            if (comment.timestamp) {
+                const timestamp = new Date(comment.timestamp);
+                const timeText = document.createElement('div');
+                timeText.className = 'message-timestamp';
+                timeText.textContent = formatTimestamp(timestamp);
+                messageBubble.appendChild(timeText);
+            }
+            
+            messagesContainer.appendChild(messageBubble);
+            
+            // 順次表示のアニメーション
+            gsap.fromTo(messageBubble,
+                { opacity: 0, y: 30, scale: 0.9 },
+                { 
+                    opacity: 1, 
+                    y: 0, 
+                    scale: 1, 
+                    duration: 0.4, 
+                    ease: "power2.out",
+                    delay: index * 0.1 // 順次表示
+                }
+            );
+        }, index * 100); // 100msずつ遅延
+    });
+    
+    // 全てのメッセージが表示された後にスクロール
+    setTimeout(() => {
+        scrollToBottom();
+    }, comments.length * 100 + 500);
+}
+
+// タイムスタンプをフォーマットする関数
+function formatTimestamp(date) {
+    const now = new Date();
+    const diff = now - date;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    
+    if (minutes < 1) {
+        return 'たった今';
+    } else if (minutes < 60) {
+        return `${minutes}分前`;
+    } else if (hours < 24) {
+        return `${hours}時間前`;
+    } else if (days < 7) {
+        return `${days}日前`;
+    } else {
+        return date.toLocaleDateString('ja-JP', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+}

@@ -22,9 +22,14 @@ public class GetComments
             "messages", 
             Connection = "CosmosDBConnection",
             SqlQuery = "SELECT * FROM c ORDER BY c.timestamp DESC OFFSET 0 LIMIT 100")] 
-        IEnumerable<Comment> comments)
-    {
+        IEnumerable<Comment> comments)    {
         _logger.LogInformation("GetComments function processed a request.");
+
+        // OPTIONSリクエストの場合（CORSプリフライト）
+        if (req.Method == "OPTIONS")
+        {
+            return new OkResult();
+        }
 
         try
         {

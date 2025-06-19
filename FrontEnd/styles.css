@@ -104,6 +104,14 @@ body {
     animation: slideIn 0.3s ease-out;
 }
 
+/* タイムスタンプスタイル */
+.message-timestamp {
+    font-size: 0.7rem;
+    opacity: 0.7;
+    margin-top: 5px;
+    text-align: right;
+}
+
 .message-bubble.user {
     background: linear-gradient(45deg, #ff6b6b, #ffa726);
     color: white;
