@@ -461,7 +461,7 @@ function createGiftExplosion() {
 let lastMessageCount = 0;
 
 function startMessagePolling() {
-    setInterval(async () => {
+    async function pollMessages() {
         try {
             let url = `${API_BASE_URL}/GetComments`;
             if (API_KEY) {
@@ -477,18 +477,18 @@ function startMessagePolling() {
             
             if (response.ok) {
                 const comments = await response.json();
-                
-                // 新しいメッセージがある場合の処理
-                if (comments && Array.isArray(comments) && comments.length > lastMessageCount) {
-                    const newMessages = comments.slice(0, comments.length - lastMessageCount);
-                    displayNewMessages(newMessages);
-                    lastMessageCount = comments.length;
-                }
+                displayNewMessages(comments);
             }
         } catch (error) {
             console.error('メッセージ取得エラー:', error);
+        } finally {
+            // 前回のリクエストが完了してから5秒後に次のポーリングを実行
+            setTimeout(pollMessages, 5000);
         }
-    }, 3000); // 3秒ごとに確認
+    }
+    
+    // 初回実行
+    pollMessages();
 }
 
 // 新しいメッセージを花火形式で表示する関数
