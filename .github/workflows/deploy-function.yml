@@ -9,7 +9,7 @@ on:
 
 env:
   AZURE_FUNCTIONAPP_NAME: func-nancopa
-  AZURE_FUNCTIONAPP_SOURCE_PATH: ./Functions
+  AZURE_FUNCTIONAPP_SOURCE_PATH: ./Functions/nancopa_anniversary
   DOTNET_VERSION: 9.0.x
   CONFIGURATION: Release
   WORKING_DIRECTORY: Functions
