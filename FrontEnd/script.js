@@ -116,9 +116,11 @@ function initializeApp() {
     
     console.log('初期化:', { API_BASE_URL, hasApiKey: !!API_KEY });
     
+
     // GSAPプラグインを登録
     gsap.registerPlugin(Draggable);
     
+
     // 即座にローディング表示を開始
     showLoadingIndicator();
     
@@ -1273,6 +1275,7 @@ async function loadExistingMessages() {
     }
 }
 
+
 // メッセージを削除するエフェクト付き関数
 function removeMessageWithEffect(element) {
     // 削除エフェクト：爆発のようなアニメーション
@@ -1617,3 +1620,4 @@ function setupMobileOptimizations() {
         }
     }, { passive: false });
 }
+
