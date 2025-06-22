@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+    paths:
+      - FrontEnd/**
+      - .github\workflows\azure-static-web-apps-calm-sea-085b77100.yml
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches:
