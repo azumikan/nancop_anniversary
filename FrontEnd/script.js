@@ -10,18 +10,88 @@ const effectsCanvas = document.getElementById('effectsCanvas');
 // 花火メッセージの配列
 let activeFireworks = [];
 
-// カラフルなグラデーション配列
+// カラフルなグラデーション配列 - 大幅に追加
 const gradients = [
+    // 暖色系グラデーション
     'linear-gradient(45deg, #ff6b6b, #ffa726)',
-    'linear-gradient(45deg, #4facfe, #00f2fe)',
+    'linear-gradient(45deg, #ff8a80, #ff5722)',
+    'linear-gradient(135deg, #ff9a9e, #fecfef)',
+    'linear-gradient(45deg, #ff6f91, #ff9671)',
+    'linear-gradient(135deg, #ffecd2, #fcb69f)',
     'linear-gradient(45deg, #f093fb, #f5576c)',
+    'linear-gradient(135deg, #ff758c, #ff7eb3)',
+    'linear-gradient(45deg, #ffa726, #fb8c00)',
+    
+    // 寒色系グラデーション
     'linear-gradient(45deg, #4facfe, #00f2fe)',
+    'linear-gradient(135deg, #667eea, #764ba2)',
+    'linear-gradient(45deg, #43e97b, #38f9d7)',
+    'linear-gradient(135deg, #667eea, #a8edea)',
+    'linear-gradient(45deg, #5ee7df, #66a6ff)',
+    'linear-gradient(135deg, #4facfe, #764ba2)',
+    'linear-gradient(45deg, #74b9ff, #0984e3)',
+    'linear-gradient(135deg, #3742fa, #2f3542)',
+    
+    // パープル系グラデーション
     'linear-gradient(45deg, #a8edea, #fed6e3)',
-    'linear-gradient(45deg, #ffecd2, #fcb69f)',
-    'linear-gradient(45deg, #667eea, #764ba2)',
+    'linear-gradient(135deg, #667eea, #764ba2)',
+    'linear-gradient(45deg, #c471f5, #fa71cd)',
+    'linear-gradient(135deg, #667eea, #a8edea)',
+    'linear-gradient(45deg, #c44569, #f8b500)',
+    'linear-gradient(135deg, #6c5ce7, #a29bfe)',
+    
+    // グリーン系グラデーション
+    'linear-gradient(45deg, #56ab2f, #a8e6cf)',
+    'linear-gradient(135deg, #11998e, #38ef7d)',
+    'linear-gradient(45deg, #00b09b, #96c93d)',
+    'linear-gradient(135deg, #43e97b, #38f9d7)',
+    'linear-gradient(45deg, #2ed573, #7bed9f)',
+    
+    // ゴールド・シルバー系
+    'linear-gradient(45deg, #f7971e, #ffd200)',
+    'linear-gradient(135deg, #ffd89b, #19547b)',
+    'linear-gradient(45deg, #c9d6ff, #e2e2e2)',
+    'linear-gradient(135deg, #ddd6f3, #faaca8)',
+    'linear-gradient(45deg, #ffafbd, #ffc3a0)',
+    
+    // 虹色・マルチカラー
+    'linear-gradient(45deg, #ff0844, #ffb199)',
+    'linear-gradient(135deg, #fc466b, #3f5efb)',
     'linear-gradient(45deg, #f093fb, #f5576c)',
-    'linear-gradient(45deg, #ffecd2, #fcb69f)',
-    'linear-gradient(45deg, #a8edea, #fed6e3)'
+    'linear-gradient(135deg, #4facfe, #00f2fe)',
+    'linear-gradient(45deg, #667eea, #764ba2)',
+    
+    // パステル系
+    'linear-gradient(45deg, #ffeaa7, #fab1a0)',
+    'linear-gradient(135deg, #74b9ff, #e17055)',
+    'linear-gradient(45deg, #fd79a8, #fdcb6e)',
+    'linear-gradient(135deg, #6c5ce7, #fd79a8)',
+    'linear-gradient(45deg, #a29bfe, #ffeaa7)',
+    
+    // ダーク系
+    'linear-gradient(45deg, #2d3436, #636e72)',
+    'linear-gradient(135deg, #74b9ff, #0984e3)',
+    'linear-gradient(45deg, #fd79a8, #fdcb6e)',
+    'linear-gradient(135deg, #e17055, #f39c12)',
+    
+    // ネオン系
+    'linear-gradient(45deg, #00ff88, #00b8ff)',
+    'linear-gradient(135deg, #ff006e, #8338ec)',
+    'linear-gradient(45deg, #06ffa5, #f9ca24)',
+    'linear-gradient(135deg, #ff9ff3, #f368e0)',
+    'linear-gradient(45deg, #54a0ff, #5f27cd)',
+    
+    // 夕焼け・朝焼け系
+    'linear-gradient(45deg, #ff9a56, #ffad56)',
+    'linear-gradient(135deg, #ff6348, #ff7675)',
+    'linear-gradient(45deg, #fd79a8, #fa8072)',
+    'linear-gradient(135deg, #ff7675, #fab1a0)',
+    
+    // 海・空系
+    'linear-gradient(45deg, #74b9ff, #0984e3)',
+    'linear-gradient(135deg, #00cec9, #55a3ff)',
+    'linear-gradient(45deg, #74b9ff, #00b894)',
+    'linear-gradient(135deg, #0984e3, #74b9ff)'
 ];
 
 // アプリケーション初期化
@@ -52,9 +122,7 @@ function initializeApp() {
     
     // 定期的なお祝いエフェクト開始
     startPeriodicCelebration();
-    
-    // GSAP初期設定
-    gsap.set('.quick-btn', { scale: 1 });
+      // GSAP初期設定
     gsap.set('.gift-btn', { scale: 1 });
 }
 
@@ -76,18 +144,7 @@ function setupEventListeners() {
             firework.style.maxWidth = maxWidth + 'px';
         });
     });
-    
-    // ボタンのホバーエフェクト
-    document.querySelectorAll('.quick-btn').forEach(btn => {
-        btn.addEventListener('mouseenter', () => {
-            gsap.to(btn, { scale: 1.05, duration: 0.2, ease: "power2.out" });
-        });
-        
-        btn.addEventListener('mouseleave', () => {
-            gsap.to(btn, { scale: 1, duration: 0.2, ease: "power2.out" });
-        });
-    });
-    
+      // ボタンのホバーエフェクト（ギフトボタンのみ）
     document.querySelector('.gift-btn').addEventListener('mouseenter', function() {
         gsap.to(this, { scale: 1.1, duration: 0.3, ease: "elastic.out(1, 0.3)" });
     });
@@ -103,9 +160,40 @@ function createFireworkMessage(message) {
     firework.className = 'message-firework';
     firework.textContent = message;
     
-    // ランダムなグラデーション背景を選択
-    const randomGradient = gradients[Math.floor(Math.random() * gradients.length)];
-    firework.style.background = randomGradient;
+    // メッセージ内容に応じてグラデーションを選択
+    let selectedGradient;
+    
+    // 特定のキーワードに応じて色合いを変更
+    if (message.includes('❤️') || message.includes('💖') || message.includes('💕') || message.includes('愛') || message.includes('好き')) {
+        // 愛情系：暖色系グラデーション
+        const loveGradients = gradients.slice(0, 8); // 暖色系の最初の8個
+        selectedGradient = loveGradients[Math.floor(Math.random() * loveGradients.length)];
+    } else if (message.includes('🎉') || message.includes('🎊') || message.includes('おめでとう') || message.includes('祝')) {
+        // お祝い系：明るい多色グラデーション
+        const celebrationGradients = gradients.slice(32, 42); // 虹色・マルチカラー系
+        selectedGradient = celebrationGradients[Math.floor(Math.random() * celebrationGradients.length)];
+    } else if (message.includes('✨') || message.includes('⭐') || message.includes('🌟') || message.includes('キラキラ')) {
+        // キラキラ系：ゴールド・シルバー系
+        const sparkleGradients = gradients.slice(24, 32); // ゴールド・シルバー系
+        selectedGradient = sparkleGradients[Math.floor(Math.random() * sparkleGradients.length)];
+    } else if (message.includes('🌊') || message.includes('💙') || message.includes('青') || message.includes('海') || message.includes('空')) {
+        // 海・空系：寒色系グラデーション
+        const blueGradients = gradients.slice(8, 16); // 寒色系
+        selectedGradient = blueGradients[Math.floor(Math.random() * blueGradients.length)];
+    } else if (message.includes('🌸') || message.includes('桜') || message.includes('春') || message.includes('ピンク')) {
+        // 春・桜系：パステル系
+        const pastelGradients = gradients.slice(42, 48); // パステル系
+        selectedGradient = pastelGradients[Math.floor(Math.random() * pastelGradients.length)];
+    } else if (message.includes('🔥') || message.includes('熱い') || message.includes('情熱') || message.includes('やふ')) {
+        // 熱情・エネルギー系：ネオン系
+        const energyGradients = gradients.slice(52, 58); // ネオン系
+        selectedGradient = energyGradients[Math.floor(Math.random() * energyGradients.length)];
+    } else {
+        // 通常のメッセージ：全ての中からランダム
+        selectedGradient = gradients[Math.floor(Math.random() * gradients.length)];
+    }
+    
+    firework.style.background = selectedGradient;
     
     // レスポンシブ対応：画面サイズに応じてメッセージ幅を調整
     const screenWidth = window.innerWidth;
@@ -189,15 +277,9 @@ async function sendMessage() {
     
     // APIにメッセージを送信
     const result = await sendMessageToAPI(message);
-    if (result) {
-        // 成功時にキラキラエフェクト
+    if (result) {        // 成功時にキラキラエフェクト
         createSparkleEffect();
     }
-}
-
-function sendQuickMessage(message) {
-    createFireworkMessage(message);
-    sendMessageToAPI(message);
 }
 
 function sendGift() {

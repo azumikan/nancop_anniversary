@@ -87,42 +87,6 @@ body {
     text-align: center;
 }
 
-/* クイックアクション */
-.quick-actions {
-    padding: 15px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-}
-
-.quick-btn {
-    padding: 10px 16px;
-    border: none;
-    border-radius: 20px;
-    background: linear-gradient(45deg, #667eea, #764ba2);
-    color: white;
-    font-size: 0.9rem;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    backdrop-filter: blur(5px);
-}
-
-.quick-btn:hover {
-    transform: translateY(-2px) scale(1.05);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-}
-
-/* 古いチャットスタイルは削除 - 花火形式に変更 */
-
-.gift-btn:hover {
-    transform: scale(1.05);
-    box-shadow: 0 5px 20px rgba(240, 147, 251, 0.4);
-}
-
 /* 入力セクション */
 .input-section {
     padding: 20px;
@@ -293,15 +257,8 @@ body {
         max-width: 100%;
         margin: 0;
     }
-    
-    .header h1 {
+      .header h1 {
         font-size: 1.3rem;
-    }
-    
-    .quick-btn {
-        min-width: 80px;
-        font-size: 0.75rem;
-        padding: 8px 12px;
     }
     
     .input-container {
@@ -337,14 +294,9 @@ body {
     .header h1 {
         font-size: 1.6rem;
     }
-    
-    .message-firework {
+      .message-firework {
         font-size: 1rem;
         max-width: calc(100vw - 40px) !important;
-    }
-    
-    .quick-btn {
-        font-size: 0.85rem;
     }
 }
 
