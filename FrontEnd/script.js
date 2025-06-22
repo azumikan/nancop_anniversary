@@ -1353,11 +1353,15 @@ function createRemovalExplosion(element) {
 
 // 削除確認のための視覚的フィードバック強化
 function enhanceDraggedMessageAppearance(element) {
+    // モバイルデバイスかどうかの判定
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                     ('ontouchstart' in window);
+    
     // ドラッグ済みメッセージの外観を変更
     gsap.to(element, {
         borderWidth: '3px',
         borderStyle: 'dashed',
-        borderColor: 'rgba(255, 255, 255, 0.8)',
+        borderColor: 'rgba(255, 255, 255, 0.9)',
         duration: 0.5,
         ease: "power2.out"
     });
@@ -1366,18 +1370,19 @@ function enhanceDraggedMessageAppearance(element) {
     const deleteIcon = document.createElement('span');
     deleteIcon.textContent = '❌';
     deleteIcon.style.position = 'absolute';
-    deleteIcon.style.top = '-5px';
-    deleteIcon.style.right = '-5px';
-    deleteIcon.style.fontSize = '14px';
-    deleteIcon.style.background = 'rgba(255, 255, 255, 0.9)';
+    deleteIcon.style.top = '-8px';
+    deleteIcon.style.right = '-8px';
+    deleteIcon.style.fontSize = isMobile ? '18px' : '14px'; // モバイルでは大きくする
+    deleteIcon.style.background = 'rgba(255, 255, 255, 0.95)';
     deleteIcon.style.borderRadius = '50%';
-    deleteIcon.style.width = '20px';
-    deleteIcon.style.height = '20px';
+    deleteIcon.style.width = isMobile ? '28px' : '20px'; // モバイルでは大きくする
+    deleteIcon.style.height = isMobile ? '28px' : '20px';
     deleteIcon.style.display = 'flex';
     deleteIcon.style.alignItems = 'center';
     deleteIcon.style.justifyContent = 'center';
     deleteIcon.style.pointerEvents = 'none';
     deleteIcon.style.zIndex = '1';
+    deleteIcon.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.3)';
     deleteIcon.className = 'delete-indicator';
     
     element.appendChild(deleteIcon);
@@ -1392,12 +1397,70 @@ function enhanceDraggedMessageAppearance(element) {
         duration: 0.3,
         ease: "back.out(1.7)"
     });
+    
+    // モバイル向けのヘルプテキストを追加
+    if (isMobile) {
+        const helpText = document.createElement('div');
+        helpText.textContent = 'タップで削除';
+        helpText.style.position = 'absolute';
+        helpText.style.top = '-35px';
+        helpText.style.left = '50%';
+        helpText.style.transform = 'translateX(-50%)';
+        helpText.style.background = 'rgba(255, 0, 0, 0.9)';
+        helpText.style.color = 'white';
+        helpText.style.padding = '4px 10px';
+        helpText.style.borderRadius = '15px';
+        helpText.style.fontSize = '12px';
+        helpText.style.fontWeight = 'bold';
+        helpText.style.whiteSpace = 'nowrap';
+        helpText.style.pointerEvents = 'none';
+        helpText.style.zIndex = '2';
+        helpText.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.3)';
+        helpText.className = 'mobile-delete-hint';
+        
+        element.appendChild(helpText);
+        
+        // ヘルプテキストをアニメーション
+        gsap.fromTo(helpText, {
+            scale: 0,
+            opacity: 0,
+            y: 10
+        }, {
+            scale: 1,
+            opacity: 1,
+            y: 0,
+            duration: 0.4,
+            delay: 0.2,
+            ease: "back.out(1.7)"
+        });
+        
+        // 3秒後にヘルプテキストをフェードアウト
+        gsap.to(helpText, {
+            opacity: 0,
+            duration: 0.5,
+            delay: 3,
+            onComplete: () => {
+                if (helpText.parentNode) {
+                    helpText.parentNode.removeChild(helpText);
+                }
+            }
+        });
+    }
 }
 
 // ドラッグ機能を追加する関数
 function makeDraggable(element) {
     let isDragged = false; // ドラッグされたかどうかを追跡
     let dragDistance = 0; // ドラッグ距離を追跡
+    let touchStartTime = 0; // タッチ開始時間を記録
+    let longPressTimer = null; // 長押しタイマー
+    
+    // モバイルデバイスかどうかの判定
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                     ('ontouchstart' in window);
+    
+    // ドラッグ距離の閾値をデバイスに応じて設定
+    const dragThreshold = isMobile ? 20 : 10; // モバイルでは20px、デスクトップでは10px
     
     // ドラッグ可能にする
     Draggable.create(element, {
@@ -1406,6 +1469,7 @@ function makeDraggable(element) {
         inertia: true, // 慣性を有効にする
         throwProps: true, // 投げる動作を有効にする
         edgeResistance: 0.8, // 境界での抵抗
+        allowNativeTouchScrolling: false, // ネイティブタッチスクロールを無効化
         onDragStart: function() {
             // ドラッグ開始時
             element.classList.add('dragging');
@@ -1413,6 +1477,12 @@ function makeDraggable(element) {
             // 自動アニメーションを停止
             gsap.killTweensOf(element);
             dragDistance = 0; // ドラッグ距離をリセット
+            
+            // 長押しタイマーをクリア
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
         },
         onDrag: function() {
             // ドラッグ中のスパークルエフェクト
@@ -1427,8 +1497,8 @@ function makeDraggable(element) {
             element.classList.remove('dragging');
             gsap.to(element, { scale: 1, duration: 0.3 });
             
-            // 一定距離以上ドラッグされた場合のみ「ドラッグ済み」とマーク
-            if (dragDistance > 10) { // 10px以上ドラッグされた場合
+            // デバイスに応じた距離の閾値を使用
+            if (dragDistance > dragThreshold) {
                 isDragged = true;
                 element.setAttribute('data-dragged', 'true');
                 // ドラッグ済みの視覚的な表示を強化
@@ -1459,10 +1529,64 @@ function makeDraggable(element) {
         }
     });
     
-    // タッチデバイス対応
-    element.addEventListener('touchstart', function(e) {
-        e.preventDefault(); // デフォルトのタッチ動作を防ぐ
-    }, { passive: false });
+    // モバイル向けの長押し削除機能を追加
+    if (isMobile) {
+        console.log('📱 Setting up mobile touch handlers for message');
+        
+        element.addEventListener('touchstart', function(e) {
+            touchStartTime = Date.now();
+            dragDistance = 0; // タッチ開始時にドラッグ距離をリセット
+            console.log('📱 Touch start - setting up long press timer');
+            
+            // 長押しタイマーを設定（800ms後に削除可能状態にする）
+            longPressTimer = setTimeout(() => {
+                if (dragDistance < 5) { // ほとんど動いていない場合のみ
+                    console.log('📱 Long press detected - enabling delete mode');
+                    // 長押しで削除可能状態にする
+                    isDragged = true;
+                    element.setAttribute('data-dragged', 'true');
+                    enhanceDraggedMessageAppearance(element);
+                    
+                    // バイブレーション（対応デバイスのみ）
+                    if (navigator.vibrate) {
+                        navigator.vibrate(100);
+                        console.log('📱 Vibration triggered');
+                    }
+                    
+                    // 視覚的なフィードバック
+                    gsap.to(element, {
+                        scale: 1.15,
+                        duration: 0.2,
+                        yoyo: true,
+                        repeat: 1,
+                        ease: "power2.inOut"
+                    });
+                }
+            }, 800);
+        }, { passive: true });
+        
+        element.addEventListener('touchmove', function(e) {
+            // タッチ移動時はドラッグ距離を更新
+            if (touchStartTime > 0) {
+                dragDistance += 2; // 移動を検知
+            }
+        }, { passive: true });
+        
+        element.addEventListener('touchend', function(e) {
+            console.log('📱 Touch end - clearing timers');
+            // 長押しタイマーをクリア
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+            touchStartTime = 0;
+        }, { passive: true });
+    } else {
+        // デスクトップ向けの従来のタッチイベント
+        element.addEventListener('touchstart', function(e) {
+            // デスクトップではタッチイベントの干渉を最小限に抑制
+        }, { passive: true });
+    }
 }
 
 // ドラッグ中のスパークルエフェクト
@@ -1592,32 +1716,159 @@ function createTapEffect(element) {
 
 // モバイルデバイス対応の初期設定
 function setupMobileOptimizations() {
+    // モバイルデバイス判定
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                     ('ontouchstart' in window);
+    
+    console.log('📱 Mobile optimization setup:', {
+        isMobile,
+        touchSupported: 'ontouchstart' in window,
+        userAgent: navigator.userAgent.substring(0, 100) + '...'
+    });
+    
     // ビューポートメタタグの動的調整
     let viewport = document.querySelector('meta[name="viewport"]');
     if (viewport) {
         viewport.setAttribute('content', 
             'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover'
         );
+        console.log('📱 Viewport meta tag updated');
     }
     
-    // モバイルでのスクロール防止
-    document.body.addEventListener('touchmove', function(e) {
-        e.preventDefault();
-    }, { passive: false });
+    if (isMobile) {
+        console.log('📱 Applying mobile-specific optimizations');
+        
+        // モバイルでのスクロール防止（メッセージエリア以外）
+        document.body.addEventListener('touchmove', function(e) {
+            // 入力要素やメッセージ要素の場合は許可
+            if (e.target.tagName === 'INPUT' || 
+                e.target.tagName === 'BUTTON' || 
+                e.target.closest('.message-firework') ||
+                e.target.closest('.input-section')) {
+                return;
+            }
+            e.preventDefault();
+        }, { passive: false });
+        
+        // モバイルでの拡大防止
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+        
+        // iOS Safariのバウンススクロール防止（改良版）
+        document.addEventListener('touchstart', function(e) {
+            // 入力要素、ボタン、メッセージは除外
+            if (e.target.tagName === 'INPUT' || 
+                e.target.tagName === 'BUTTON' ||
+                e.target.closest('.message-firework')) {
+                return;
+            }
+            
+            // 複数指でのタッチは防止
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        // モバイル向けのガイダンスメッセージを初回表示
+        setTimeout(() => {
+            showMobileGuidance();
+        }, 2000); // 2秒後に表示してロード完了を待つ
+        
+        console.log('📱 Mobile optimizations applied successfully');
+    } else {
+        console.log('🖥️ Desktop device detected - mobile optimizations skipped');
+    }
+}
+
+// モバイル向けのガイダンスメッセージ表示
+function showMobileGuidance() {
+    // 既にガイダンスを表示したかチェック
+    if (localStorage.getItem('mobile-guidance-shown')) {
+        return;
+    }
     
-    // モバイルでの拡大防止
-    document.addEventListener('gesturestart', function(e) {
-        e.preventDefault();
+    // モバイルデバイスでない場合はスキップ
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                     ('ontouchstart' in window);
+    if (!isMobile) {
+        return;
+    }
+    
+    console.log('📱 Showing mobile guidance for first-time user');
+    
+    // ガイダンス要素を作成
+    const guidance = document.createElement('div');
+    guidance.innerHTML = `
+        <div style="text-align: center;">
+            <p style="margin: 10px 0; font-size: 16px; font-weight: bold;">📱 モバイル操作ガイド</p>
+            <p style="margin: 5px 0; font-size: 14px;">• メッセージをドラッグして移動</p>
+            <p style="margin: 5px 0; font-size: 14px;">• 長押し（0.8秒）で削除モード</p>
+            <p style="margin: 5px 0; font-size: 14px;">• ❌ が表示されたらタップで削除</p>
+        </div>
+    `;
+    guidance.style.position = 'fixed';
+    guidance.style.top = '50%';
+    guidance.style.left = '50%';
+    guidance.style.transform = 'translate(-50%, -50%)';
+    guidance.style.background = 'rgba(0, 0, 0, 0.9)';
+    guidance.style.color = 'white';
+    guidance.style.padding = '20px';
+    guidance.style.borderRadius = '15px';
+    guidance.style.zIndex = '10000';
+    guidance.style.maxWidth = '300px';
+    guidance.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.5)';
+    guidance.style.fontSize = '14px';
+    guidance.style.lineHeight = '1.4';
+    
+    // 閉じるボタンを追加
+    const closeButton = document.createElement('button');
+    closeButton.textContent = '了解';
+    closeButton.style.marginTop = '15px';
+    closeButton.style.padding = '10px 20px';
+    closeButton.style.border = 'none';
+    closeButton.style.borderRadius = '25px';
+    closeButton.style.background = '#667eea';
+    closeButton.style.color = 'white';
+    closeButton.style.cursor = 'pointer';
+    closeButton.style.fontWeight = 'bold';
+    closeButton.style.width = '100%';
+    
+    closeButton.onclick = () => {
+        console.log('📱 Mobile guidance closed by user');
+        gsap.to(guidance, {
+            opacity: 0,
+            scale: 0.8,
+            duration: 0.3,
+            onComplete: () => {
+                if (document.body.contains(guidance)) {
+                    document.body.removeChild(guidance);
+                }
+                localStorage.setItem('mobile-guidance-shown', 'true');
+            }
+        });
+    };
+    
+    guidance.appendChild(closeButton);
+    document.body.appendChild(guidance);
+    
+    // アニメーションで表示
+    gsap.fromTo(guidance, {
+        opacity: 0,
+        scale: 0.8
+    }, {
+        opacity: 1,
+        scale: 1,
+        duration: 0.4,
+        ease: "back.out(1.7)"
     });
     
-    // iOS Safariのバウンススクロール防止
-    document.addEventListener('touchstart', function(e) {
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') {
-            return; // 入力要素とボタンは除外
+    // 5秒後に自動で閉じる
+    setTimeout(() => {
+        if (document.body.contains(guidance)) {
+            console.log('📱 Mobile guidance auto-closed after 5 seconds');
+            closeButton.click();
         }
-        if (e.touches.length > 1) {
-            e.preventDefault();
-        }
-    }, { passive: false });
+    }, 5000);
 }
 

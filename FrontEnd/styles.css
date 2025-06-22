@@ -161,11 +161,22 @@ body {
 /* 削除アイコンのスタイル */
 .delete-indicator {
     animation: deleteIconPulse 1.5s ease-in-out infinite;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
 }
 
 @keyframes deleteIconPulse {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.2); }
+}
+
+/* モバイル向けの削除ヒントスタイル */
+.mobile-delete-hint {
+    animation: mobileDeleteHint 2s ease-in-out infinite;
+}
+
+@keyframes mobileDeleteHint {
+    0%, 100% { opacity: 0.8; transform: translateX(-50%) scale(1); }
+    50% { opacity: 1; transform: translateX(-50%) scale(1.05); }
 }
 
 /* 入力セクション */
@@ -378,6 +389,35 @@ body {
     /* タッチハイライトを無効化 */
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
+    /* モバイルでのタッチ反応を改善 */
+    touch-action: manipulation;
+}
+
+/* モバイルでドラッグ中のメッセージスタイル強化 */
+@media (max-width: 768px) {
+    .message-firework.dragging {
+        z-index: 1001 !important;
+        transform: scale(1.15) !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+        filter: brightness(1.1);
+    }
+    
+    .message-firework[data-dragged="true"] {
+        border: 4px dashed rgba(255, 255, 255, 0.9) !important;
+        box-shadow: 0 0 25px rgba(255, 255, 255, 0.5), 0 6px 20px rgba(0, 0, 0, 0.3) !important;
+        animation: mobileDraggedPulse 2s ease-in-out infinite;
+    }
+    
+    @keyframes mobileDraggedPulse {
+        0%, 100% { 
+            transform: scale(1);
+            box-shadow: 0 0 25px rgba(255, 255, 255, 0.5), 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        50% { 
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.7), 0 8px 25px rgba(0, 0, 0, 0.4);
+        }
+    }
 }
 
 /* タブレット向け調整 */
