@@ -271,8 +271,8 @@ function createFireworkMessage(message) {
         // キラキラ系：ゴールド・シルバー系
         const sparkleGradients = gradients.slice(24, 32); // ゴールド・シルバー系
         selectedGradient = sparkleGradients[Math.floor(Math.random() * sparkleGradients.length)];
-    } else if (message.includes('🌊') || message.includes('💙') || message.includes('青') || message.includes('海') || message.includes('空')) {
-        // 海・空系：寒色系グラデーション
+    } else if (message.includes('🍊') || message.includes('mikan') ||message.includes('みかん') || message.includes('🍊') || message.includes('なんコパ') || message.includes('なんでも')) {
+        // 海・空系：寒色系グラデーシ
         const blueGradients = gradients.slice(8, 16); // 寒色系
         selectedGradient = blueGradients[Math.floor(Math.random() * blueGradients.length)];
     } else if (message.includes('🌸') || message.includes('桜') || message.includes('春') || message.includes('ピンク')) {
@@ -410,7 +410,7 @@ function sendGift() {
     createGiftExplosion();
     
     // APIに送信
-    sendMessageToAPI(giftMessage);
+    //sendMessageToAPI(giftMessage);
 }
 
 async function sendMessageToAPI(message) {
@@ -962,7 +962,7 @@ function createStarShower() {
 
 // バブル浮遊エフェクト（軽量化）
 function createBubbleFloat() {
-    const bubbles = ['🫧', '💙', '🩵', '💎', '🔮', '💍', '🌊'];
+    const bubbles = ['🫧', '💙', '🩵', '💎', '🔮', '🍊', '🍊'];
     const bubbleCount = Math.floor(Math.random() * 5) + 4; // 4-8個に削減（6-13個から）
     
     for (let i = 0; i < bubbleCount; i++) {
@@ -1307,7 +1307,7 @@ function removeMessageWithEffect(element) {
 
 // 削除時の爆発エフェクト
 function createRemovalExplosion(element) {
-    const explosionEmojis = ['💥', '✨', '🌟', '💫', '⭐', '🎆', '🎇', '💢'];
+    const explosionEmojis = ['💥', '✨', '🌟', '💫', '⭐', '🎆', '🎇', '🍊'];
     const particleCount = 8;
     
     const rect = element.getBoundingClientRect();
