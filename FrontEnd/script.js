@@ -1531,13 +1531,17 @@ function makeDraggable(element) {
     
     // モバイル向けの長押し削除機能を追加
     if (isMobile) {
+        console.log('📱 Setting up mobile touch handlers for message');
+        
         element.addEventListener('touchstart', function(e) {
             touchStartTime = Date.now();
             dragDistance = 0; // タッチ開始時にドラッグ距離をリセット
+            console.log('📱 Touch start - setting up long press timer');
             
             // 長押しタイマーを設定（800ms後に削除可能状態にする）
             longPressTimer = setTimeout(() => {
                 if (dragDistance < 5) { // ほとんど動いていない場合のみ
+                    console.log('📱 Long press detected - enabling delete mode');
                     // 長押しで削除可能状態にする
                     isDragged = true;
                     element.setAttribute('data-dragged', 'true');
@@ -1546,6 +1550,7 @@ function makeDraggable(element) {
                     // バイブレーション（対応デバイスのみ）
                     if (navigator.vibrate) {
                         navigator.vibrate(100);
+                        console.log('📱 Vibration triggered');
                     }
                     
                     // 視覚的なフィードバック
@@ -1568,6 +1573,7 @@ function makeDraggable(element) {
         }, { passive: true });
         
         element.addEventListener('touchend', function(e) {
+            console.log('📱 Touch end - clearing timers');
             // 長押しタイマーをクリア
             if (longPressTimer) {
                 clearTimeout(longPressTimer);
@@ -1714,15 +1720,24 @@ function setupMobileOptimizations() {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
                      ('ontouchstart' in window);
     
+    console.log('📱 Mobile optimization setup:', {
+        isMobile,
+        touchSupported: 'ontouchstart' in window,
+        userAgent: navigator.userAgent.substring(0, 100) + '...'
+    });
+    
     // ビューポートメタタグの動的調整
     let viewport = document.querySelector('meta[name="viewport"]');
     if (viewport) {
         viewport.setAttribute('content', 
             'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover'
         );
+        console.log('📱 Viewport meta tag updated');
     }
     
     if (isMobile) {
+        console.log('📱 Applying mobile-specific optimizations');
+        
         // モバイルでのスクロール防止（メッセージエリア以外）
         document.body.addEventListener('touchmove', function(e) {
             // 入力要素やメッセージ要素の場合は許可
@@ -1756,7 +1771,13 @@ function setupMobileOptimizations() {
         }, { passive: false });
         
         // モバイル向けのガイダンスメッセージを初回表示
-        showMobileGuidance();
+        setTimeout(() => {
+            showMobileGuidance();
+        }, 2000); // 2秒後に表示してロード完了を待つ
+        
+        console.log('📱 Mobile optimizations applied successfully');
+    } else {
+        console.log('🖥️ Desktop device detected - mobile optimizations skipped');
     }
 }
 
@@ -1766,6 +1787,15 @@ function showMobileGuidance() {
     if (localStorage.getItem('mobile-guidance-shown')) {
         return;
     }
+    
+    // モバイルデバイスでない場合はスキップ
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                     ('ontouchstart' in window);
+    if (!isMobile) {
+        return;
+    }
+    
+    console.log('📱 Showing mobile guidance for first-time user');
     
     // ガイダンス要素を作成
     const guidance = document.createElement('div');
@@ -1805,12 +1835,15 @@ function showMobileGuidance() {
     closeButton.style.width = '100%';
     
     closeButton.onclick = () => {
+        console.log('📱 Mobile guidance closed by user');
         gsap.to(guidance, {
             opacity: 0,
             scale: 0.8,
             duration: 0.3,
             onComplete: () => {
-                document.body.removeChild(guidance);
+                if (document.body.contains(guidance)) {
+                    document.body.removeChild(guidance);
+                }
                 localStorage.setItem('mobile-guidance-shown', 'true');
             }
         });
@@ -1833,6 +1866,7 @@ function showMobileGuidance() {
     // 5秒後に自動で閉じる
     setTimeout(() => {
         if (document.body.contains(guidance)) {
+            console.log('📱 Mobile guidance auto-closed after 5 seconds');
             closeButton.click();
         }
     }, 5000);
