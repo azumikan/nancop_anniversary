@@ -10,6 +10,10 @@ const effectsCanvas = document.getElementById('effectsCanvas');
 // 花火メッセージの配列
 let activeFireworks = [];
 
+// エフェクト制限のためのカウンター（パフォーマンス向上）
+let activeEffectsCount = 0;
+const MAX_ACTIVE_EFFECTS = 3; // 同時実行エフェクト数を制限
+
 // カラフルなグラデーション配列 - 大幅に追加
 const gradients = [
     // 暖色系グラデーション
@@ -111,6 +115,9 @@ function initializeApp() {
     
     console.log('初期化:', { API_BASE_URL, hasApiKey: !!API_KEY });
     
+    // 即座にローディング表示を開始
+    showLoadingIndicator();
+    
     // APIの疎通確認
     checkApiConnection();
       
@@ -122,8 +129,37 @@ function initializeApp() {
     
     // 定期的なお祝いエフェクト開始
     startPeriodicCelebration();
-      // GSAP初期設定
+    
+    // 追加の定期エフェクト（画面を常に活発に保つ）
+    startContinuousEffects();
+    
+    // GSAP初期設定
     gsap.set('.gift-btn', { scale: 1 });
+}
+
+// 連続エフェクトで画面を常に活発に保つ（60%に調整）
+function startContinuousEffects() {
+    // 5-12秒ごとに小さなエフェクトを実行（間隔を延長）
+    setInterval(() => {
+        // 60%の確率でエフェクトを実行
+        if (Math.random() < 0.6) {
+            const miniEffects = [
+                () => createSparkleEffect(),
+                () => createFloatingHearts(),
+                () => {
+                    // ランダムメッセージを表示
+                    const randomMessages = [
+                        '✨', '🎉', '💖', '🌟', '🎊', '💫', '🎈', '🥳'
+                    ];
+                    const randomMsg = randomMessages[Math.floor(Math.random() * randomMessages.length)];
+                    createFireworkMessage(randomMsg);
+                }
+            ];
+            
+            const randomMiniEffect = miniEffects[Math.floor(Math.random() * miniEffects.length)];
+            randomMiniEffect();
+        }
+    }, Math.random() * 7000 + 5000); // 5-12秒間隔に延長
 }
 
 function setupEventListeners() {
@@ -151,6 +187,59 @@ function setupEventListeners() {
     
     document.querySelector('.gift-btn').addEventListener('mouseleave', function() {
         gsap.to(this, { scale: 1, duration: 0.3, ease: "elastic.out(1, 0.3)" });
+    });
+}
+
+// ローディングインジケーターを表示する関数
+function showLoadingIndicator() {
+    createFireworkMessage('🔄 メッセージを読み込み中...');
+    
+    // ローディング中も複数のエフェクトで空白感を完全に排除
+    setTimeout(() => {
+        createSparkleEffect();
+        createFloatingHearts();
+    }, 300);
+    
+    setTimeout(() => {
+        createBubbleFloat();
+        createConfettiEffect();
+    }, 800);
+    
+    setTimeout(() => {
+        createHeartRain();
+    }, 1200);
+    
+    // ローディング中にも追加メッセージを表示
+    const loadingMessages = [
+        '🌟 準備中です...',
+        '✨ もうすぐです！',
+        '🎉 お楽しみに！'
+    ];
+    
+    loadingMessages.forEach((msg, index) => {
+        setTimeout(() => {
+            createFireworkMessage(msg);
+        }, (index + 1) * 600);
+    });
+}
+
+// ローディングインジケーターをクリアする関数
+function clearLoadingIndicator() {
+    // 既存のローディングメッセージを削除
+    const loadingMessages = document.querySelectorAll('.message-firework');
+    loadingMessages.forEach(msg => {
+        if (msg.textContent.includes('🔄 メッセージを読み込み中')) {
+            gsap.to(msg, {
+                opacity: 0,
+                scale: 0.8,
+                duration: 0.3,
+                onComplete: () => {
+                    if (msg.parentNode) {
+                        msg.parentNode.removeChild(msg);
+                    }
+                }
+            });
+        }
     });
 }
 
@@ -461,7 +550,7 @@ function createGiftExplosion() {
 let lastMessageCount = 0;
 
 function startMessagePolling() {
-    setInterval(async () => {
+    async function pollMessages() {
         try {
             let url = `${API_BASE_URL}/GetComments`;
             if (API_KEY) {
@@ -478,48 +567,501 @@ function startMessagePolling() {
             if (response.ok) {
                 const comments = await response.json();
                 
-                // 新しいメッセージがある場合の処理
-                if (comments && Array.isArray(comments) && comments.length > lastMessageCount) {
-                    const newMessages = comments.slice(0, comments.length - lastMessageCount);
-                    displayNewMessages(newMessages);
-                    lastMessageCount = comments.length;
+                // メッセージ表示頻度を軽減
+                if (comments && Array.isArray(comments) && comments.length > 0) {
+                    // ランダム表示数を削減
+                    const randomCount = Math.floor(Math.random() * 6) + 3; // 3-8個をランダム表示（5-14から削減）
+                    const randomComments = [];
+                    for (let i = 0; i < randomCount; i++) {
+                        const randomIndex = Math.floor(Math.random() * comments.length);
+                        randomComments.push(comments[randomIndex]);
+                    }
+                    displayNewMessages(randomComments);
                 }
             }
         } catch (error) {
             console.error('メッセージ取得エラー:', error);
+        } finally {
+            // ポーリング間隔を延長（2秒から3秒）
+            setTimeout(pollMessages, 3000);
         }
-    }, 3000); // 3秒ごとに確認
+    }
+    
+    // 初回実行
+    pollMessages();
 }
 
 // 新しいメッセージを花火形式で表示する関数
 function displayNewMessages(newMessages) {
-    newMessages.forEach((comment, index) => {
-        // ランダムな遅延時間（500ms〜2000ms）
-        const randomDelay = Math.random() * 1500 + 500;
+    // 新着メッセージの表示数を適度に調整（軽量化）
+    const maxNewMessages = Math.min(newMessages.length, 15); // 最大15件に削減（25件から）
+    const selectedMessages = newMessages.slice(0, maxNewMessages);
+    
+    // 重複表示を軽減
+    const enhancedMessages = [...selectedMessages];
+    if (selectedMessages.length > 5) {
+        enhancedMessages.push(...selectedMessages.slice(0, 5)); // 重複を5件に削減
+    }
+    
+    enhancedMessages.forEach((comment, index) => {
+        // 遅延時間を延長（0.8-1.5秒）
+        const randomDelay = Math.random() * 700 + 800;
         
         setTimeout(() => {
             createFireworkMessage(comment.message);
-            // 新着メッセージには特別なエフェクト
-            setTimeout(() => {
-                createSparkleEffect();
-            }, 1000);
+            // エフェクトの確率を軽減
+            if (Math.random() < 0.55) { // 55%の確率でエフェクト（90%から削減）
+                setTimeout(() => {
+                    const effects = [createSparkleEffect, createFloatingHearts, createBubbleFloat];
+                    const randomEffect = effects[Math.floor(Math.random() * effects.length)];
+                    randomEffect();
+                }, 500); // 遅延も延長
+            }
         }, randomDelay);
     });
 }
 
-// パフォーマンス最適化：画面外のパーティクルを削除
-function cleanupParticles() {
-    const particles = effectsCanvas.querySelectorAll('.particle, .confetti');
-    particles.forEach(particle => {
-        const rect = particle.getBoundingClientRect();
-        if (rect.top > window.innerHeight + 100 || rect.bottom < -100) {
-            particle.remove();
+// 既存メッセージを花火形式で表示する関数を修正
+function displayExistingMessages(comments) {
+    // 表示数を適度に調整（軽量化）
+    const maxDisplayCount = Math.min(comments.length, 30); // 最大30件に削減（50件から）
+    const selectedComments = comments.slice(0, maxDisplayCount);
+    
+    // 重複表示を軽減
+    const duplicatedComments = [...selectedComments, ...selectedComments.slice(0, 10)]; // 重複を10件に削減
+    
+    duplicatedComments.forEach((comment, index) => {
+        const delay = index * 600; // 0.6秒間隔に延長（0.4秒から）
+        setTimeout(() => {
+            createFireworkMessage(comment.message);
+        }, delay);
+    });
+    
+    // エフェクトの同時実行を減らす
+    setTimeout(() => {
+        if (Math.random() < 0.6) createConfettiEffect(); // 60%の確率
+    }, 1000);
+    
+    setTimeout(() => {
+        if (Math.random() < 0.6) createHeartRain(); // 60%の確率
+    }, 3000);
+    
+    setTimeout(() => {
+        if (Math.random() < 0.6) createStarShower(); // 60%の確率
+    }, 5000);
+}
+
+// ウェルカムメッセージを表示する関数
+function displayWelcomeMessage() {
+    const welcomeMessages = [
+        '🎉 なんでもCopilot一周年おめでとう！',
+        '✨ みんなでお祝いしましょう！',
+        '💖 素敵なメッセージをお待ちしています',
+        '🎊 盛り上がっていきましょう！',
+        '🌟 たくさんのメッセージをどうぞ！',
+        '🚀 最高の一周年記念！',
+        '🎈 みんなありがとう！',
+        '🥳 お祝いの時間です！',
+        '💫 きらめく瞬間を共に！',
+        '🎭 楽しい時間の始まり！'
+    ];
+    
+    // ウェルカムメッセージを重複表示でさらに盛り上げ
+    const duplicatedMessages = [...welcomeMessages, ...welcomeMessages.slice(0, 5)];
+    
+    duplicatedMessages.forEach((message, index) => {
+        setTimeout(() => {
+            createFireworkMessage(message);
+        }, index * 800); // 0.8秒間隔で表示
+    });
+    
+    // ウェルカム後に複数のエフェクトを連続実行
+    setTimeout(() => {
+        createHeartRain();
+        createConfettiEffect();
+    }, 2000);
+    
+    setTimeout(() => {
+        createStarShower();
+        createBubbleFloat();
+    }, 4000);
+    
+    setTimeout(() => {
+        createRainbowEffect();
+        createGiftExplosion();
+    }, 6000);
+}
+
+// タイムスタンプをフォーマットする関数
+function formatTimestamp(date) {
+    const now = new Date();
+    const diff = now - date;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    
+    if (minutes < 1) {
+        return 'たった今';
+    } else if (minutes < 60) {
+        return `${minutes}分前`;
+    } else if (hours < 24) {
+        return `${hours}時間前`;
+    } else if (days < 7) {
+        return `${days}日前`;
+    } else {
+        return date.toLocaleDateString('ja-JP', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+}
+
+// スパークル効果を生成する関数
+function createSparkleEffect(targetElement) {
+    const sparkles = ['✨', '⭐', '💫', '🌟', '💖', '💕'];
+    const sparkleCount = Math.floor(Math.random() * 8) + 5;
+    
+    for (let i = 0; i < sparkleCount; i++) {
+        const sparkle = document.createElement('div');
+        sparkle.className = 'sparkle-particle';
+        sparkle.textContent = sparkles[Math.floor(Math.random() * sparkles.length)];
+        sparkle.style.position = 'absolute';
+        sparkle.style.pointerEvents = 'none';
+        sparkle.style.zIndex = '1000';
+        sparkle.style.fontSize = Math.random() * 8 + 12 + 'px';
+        
+        // ターゲット要素の位置を基準にスパークルを配置
+        const rect = targetElement.getBoundingClientRect();
+        const containerRect = messagesContainer.getBoundingClientRect();
+        
+        sparkle.style.left = (rect.left - containerRect.left + Math.random() * rect.width) + 'px';
+        sparkle.style.top = (rect.top - containerRect.top + Math.random() * rect.height) + 'px';
+        
+        messagesContainer.appendChild(sparkle);
+        
+        // ランダムな方向と距離でアニメーション
+        const angle = Math.random() * Math.PI * 2;
+        const distance = Math.random() * 50 + 30;
+        const targetX = Math.cos(angle) * distance;
+        const targetY = Math.sin(angle) * distance;
+          gsap.fromTo(sparkle, 
+            { 
+                opacity: 0, 
+                scale: 0.3,
+                rotation: 0
+            },
+            { 
+                opacity: 1, 
+                scale: 1.2,
+                rotation: 120, // 回転を120度に制限
+                duration: 0.3,
+                ease: "power2.out",
+                onComplete: () => {                    // フェードアウトしながら移動
+                    gsap.to(sparkle, {
+                        x: targetX,
+                        y: targetY,
+                        opacity: 0,
+                        scale: 0.5,
+                        rotation: 180, // 回転を180度に制限
+                        duration: 0.8,
+                        ease: "power2.in",
+                        onComplete: () => sparkle.remove()
+                    });
+                }
+            }
+        );
+    }
+}
+
+// 音波効果を生成する関数
+function createSoundWaveEffect(targetElement) {
+    const rect = targetElement.getBoundingClientRect();
+    const containerRect = messagesContainer.getBoundingClientRect();
+    
+    // 中心点を計算
+    const centerX = rect.left - containerRect.left + rect.width / 2;
+    const centerY = rect.top - containerRect.top + rect.height / 2;
+    
+    // 複数の同心円を作成
+    for (let i = 0; i < 3; i++) {
+        const wave = document.createElement('div');
+        wave.style.position = 'absolute';
+        wave.style.left = centerX + 'px';
+        wave.style.top = centerY + 'px';
+        wave.style.width = '0px';
+        wave.style.height = '0px';
+        wave.style.border = '2px solid rgba(255, 215, 0, 0.6)';
+        wave.style.borderRadius = '50%';
+        wave.style.pointerEvents = 'none';
+        wave.style.transform = 'translate(-50%, -50%)';
+        wave.style.zIndex = '999';
+        
+        messagesContainer.appendChild(wave);
+        
+        gsap.to(wave, {
+            width: '100px',
+            height: '100px',
+            opacity: 0,
+            duration: 1,
+            delay: i * 0.2,
+            ease: "power2.out",
+            onComplete: () => wave.remove()
+        });
+    }
+}
+
+// エフェクト実行制限関数（パフォーマンス向上）
+function canRunEffect() {
+    return activeEffectsCount < MAX_ACTIVE_EFFECTS;
+}
+
+function startEffect() {
+    activeEffectsCount++;
+    console.log('エフェクト開始 - 実行中:', activeEffectsCount);
+}
+
+function endEffect() {
+    activeEffectsCount = Math.max(0, activeEffectsCount - 1);
+    console.log('エフェクト終了 - 実行中:', activeEffectsCount);
+}
+
+// 改良されたエフェクトラッパー関数
+function safeRunEffect(effectFunction) {
+    if (canRunEffect()) {
+        startEffect();
+        try {
+            effectFunction();
+        } catch (error) {
+            console.error('エフェクト実行エラー:', error);
         }
+        // 効果時間後にカウンターを減らす（大体5秒後）
+        setTimeout(() => endEffect(), 5000);
+    } else {
+        console.log('エフェクト制限により実行をスキップ');
+    }
+}
+
+// 定期的なお祝いエフェクトを開始する関数
+function startPeriodicCelebration() {
+    // 8-20秒ごとにランダムでエフェクトを実行（軽量化）
+    setInterval(() => {
+        if (Math.random() < 0.55) { // 55%の確率でエフェクト実行（90%から削減）
+            const effects = [
+                createHeartRain,
+                createStarShower,
+                createBubbleFloat,
+                createRainbowEffect,
+                createConfettiStorm,
+                createGiftExplosion,
+                createFloatingHearts,
+                createConfettiEffect
+            ];
+            
+            // 複数エフェクトを同時実行する頻度を大幅削減
+            if (Math.random() < 0.1) {
+                // 10%の確率で2つのエフェクトを同時実行（30%から削減）
+                const effect1 = effects[Math.floor(Math.random() * effects.length)];
+                const effect2 = effects[Math.floor(Math.random() * effects.length)];
+                effect1();
+                setTimeout(() => effect2(), 1500); // 間隔を延長
+            } else {
+                const randomEffect = effects[Math.floor(Math.random() * effects.length)];
+                randomEffect();
+            }
+        }
+    }, Math.random() * 12000 + 8000); // 8-20秒のランダム間隔（5-15秒から延長）
+}
+
+// ハートの雨エフェクト（軽量化）
+function createHeartRain() {
+    const hearts = ['💖', '💗', '💕', '💝', '💞', '❤️', '🧡', '💛', '💚', '💙', '💜'];
+    const heartCount = Math.floor(Math.random() * 7) + 5; // 5-11個に削減（8-19個から）
+    
+    for (let i = 0; i < heartCount; i++) {
+        setTimeout(() => {
+            const heart = document.createElement('div');
+            heart.textContent = hearts[Math.floor(Math.random() * hearts.length)];
+            heart.style.position = 'fixed';
+            heart.style.left = Math.random() * window.innerWidth + 'px';
+            heart.style.top = '-50px';
+            heart.style.fontSize = Math.random() * 10 + 18 + 'px'; // サイズを削減（15+20から）
+            heart.style.pointerEvents = 'none';
+            heart.style.zIndex = '1000';
+            heart.style.filter = 'drop-shadow(0 0 8px rgba(255, 182, 193, 0.7))'; // エフェクトを軽減
+            
+            document.body.appendChild(heart);
+            
+            gsap.to(heart, {
+                y: window.innerHeight + 100,
+                x: (Math.random() - 0.5) * 120, // 横移動を活発に
+                rotation: Math.random() * 360, // 回転を激しく
+                scale: [1, 1.5, 0.8], // スケール変化を激しく
+                duration: Math.random() * 3 + 4,
+                ease: "none",
+                onComplete: () => heart.remove()
+            });
+        }, i * 200); // 間隔を短く
+    }
+}
+
+// 星のシャワーエフェクト
+function createStarShower() {
+    const stars = ['⭐', '🌟', '✨', '💫', '🌠', '☄️', '🔥'];
+    const starCount = Math.floor(Math.random() * 8) + 6; // 6-13個に削減（10-24個から）
+    
+    for (let i = 0; i < starCount; i++) {
+        setTimeout(() => {
+            const star = document.createElement('div');
+            star.textContent = stars[Math.floor(Math.random() * stars.length)];
+            star.style.position = 'fixed';
+            star.style.left = Math.random() * window.innerWidth + 'px';
+            star.style.top = '-50px';
+            star.style.fontSize = Math.random() * 10 + 16 + 'px'; // サイズを削減（15+18から）
+            star.style.pointerEvents = 'none';
+            star.style.zIndex = '1000';
+            star.style.filter = 'drop-shadow(0 0 10px rgba(255, 215, 0, 0.8))'; // エフェクトを軽減
+            
+            document.body.appendChild(star);
+            
+            gsap.to(star, {
+                y: window.innerHeight + 100,
+                x: (Math.random() - 0.5) * 120, // 横移動を軽減（200から）
+                rotation: Math.random() * 360, // 回転を1回転まで（720から）
+                scale: [1, 1.5, 0.7], // スケール変化を軽減
+                duration: Math.random() * 4 + 3,
+                ease: "power2.out",
+                onComplete: () => star.remove()
+            });
+        }, i * 150); // 間隔を延長（100から）
+    }
+}
+
+// バブル浮遊エフェクト（軽量化）
+function createBubbleFloat() {
+    const bubbles = ['🫧', '💙', '🩵', '💎', '🔮', '💍', '🌊'];
+    const bubbleCount = Math.floor(Math.random() * 5) + 4; // 4-8個に削減（6-13個から）
+    
+    for (let i = 0; i < bubbleCount; i++) {
+        setTimeout(() => {
+            const bubble = document.createElement('div');
+            bubble.textContent = bubbles[Math.floor(Math.random() * bubbles.length)];
+            bubble.style.position = 'fixed';
+            bubble.style.left = Math.random() * window.innerWidth + 'px';
+            bubble.style.bottom = '-50px';
+            bubble.style.fontSize = Math.random() * 12 + 18 + 'px'; // サイズを大きく
+            bubble.style.pointerEvents = 'none';
+            bubble.style.zIndex = '1000';
+            bubble.style.filter = 'drop-shadow(0 0 8px rgba(173, 216, 230, 0.8))'; // エフェクトを強化
+            
+            document.body.appendChild(bubble);
+            
+            gsap.to(bubble, {
+                y: -(window.innerHeight + 100),
+                x: (Math.random() - 0.5) * 100, // 横移動を活発に
+                rotation: Math.random() * 360, // 回転を激しく
+                scale: [0.8, 1.3, 0.6], // スケール変化を激しく
+                duration: Math.random() * 4 + 5,
+                ease: "sine.inOut",
+                onComplete: () => bubble.remove()
+            });
+        }, i * 300); // 間隔を短く
+    }
+}
+
+// レインボーエフェクト
+function createRainbowEffect() {
+    const colors = ['🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '🩷'];
+    
+    colors.forEach((color, index) => {
+        setTimeout(() => {
+            const rainbow = document.createElement('div');
+            rainbow.textContent = color;
+            rainbow.style.position = 'fixed';
+            rainbow.style.left = '-50px';
+            rainbow.style.top = Math.random() * (window.innerHeight - 100) + 50 + 'px';
+            rainbow.style.fontSize = '30px';
+            rainbow.style.pointerEvents = 'none';
+            rainbow.style.zIndex = '1000';
+            rainbow.style.filter = 'drop-shadow(0 0 15px rgba(255, 255, 255, 0.8))';
+            
+            document.body.appendChild(rainbow);
+              gsap.to(rainbow, {
+                x: window.innerWidth + 100,
+                rotation: 180, // 回転を180度に制限
+                scale: [1, 1.5, 1],
+                duration: 3,
+                ease: "power2.inOut",
+                onComplete: () => rainbow.remove()
+            });
+        }, index * 100);
     });
 }
 
-// 定期的にパーティクルをクリーンアップ
-setInterval(cleanupParticles, 5000);
+// 紙吹雪の嵐エフェクト
+function createConfettiStorm() {
+    const confettiColors = ['🎊', '🎉', '🎈', '🎁', '🎂', '🍰', '🥳', '🎭', '🎪', '🎨'];
+    const confettiCount = Math.floor(Math.random() * 12) + 10; // 10-21個に削減（20-44個から）
+    
+    for (let i = 0; i < confettiCount; i++) {
+        setTimeout(() => {
+            const confetti = document.createElement('div');
+            confetti.textContent = confettiColors[Math.floor(Math.random() * confettiColors.length)];
+            confetti.style.position = 'fixed';
+            confetti.style.left = Math.random() * window.innerWidth + 'px';
+            confetti.style.top = '-50px';
+            confetti.style.fontSize = Math.random() * 8 + 18 + 'px'; // サイズを削減（12+22から）
+            confetti.style.pointerEvents = 'none';
+            confetti.style.zIndex = '1000';
+            confetti.style.filter = 'drop-shadow(0 0 6px rgba(255, 255, 255, 0.8))'; // エフェクトを軽減
+            
+            document.body.appendChild(confetti);
+            
+            gsap.to(confetti, {
+                y: window.innerHeight + 100,
+                x: (Math.random() - 0.5) * 180, // 横移動を軽減（300から）
+                rotation: Math.random() * 720, // 回転を2回転まで（1080から）
+                scale: [1, 1.5, 0.5], // スケール変化を軽減
+                duration: Math.random() * 4 + 2,
+                ease: "power1.inOut",
+                onComplete: () => confetti.remove()
+            });
+        }, i * 80); // 間隔を延長（50から）
+    }
+}
+
+// 改良されたキラキラエフェクト
+function createSparkleEffect() {
+    const sparkles = ['✨', '⭐', '💫', '🌟', '💖', '💕'];
+    const sparkleCount = Math.floor(Math.random() * 8) + 5;
+    
+    for (let i = 0; i < sparkleCount; i++) {
+        const sparkle = document.createElement('div');
+        sparkle.textContent = sparkles[Math.floor(Math.random() * sparkles.length)];
+        sparkle.style.position = 'fixed';
+        sparkle.style.left = Math.random() * window.innerWidth + 'px';
+        sparkle.style.top = Math.random() * window.innerHeight + 'px';
+        sparkle.style.fontSize = Math.random() * 10 + 16 + 'px';
+        sparkle.style.pointerEvents = 'none';
+        sparkle.style.zIndex = '1000';
+        sparkle.style.filter = 'drop-shadow(0 0 8px rgba(255, 215, 0, 0.8))';
+        
+        document.body.appendChild(sparkle);
+          gsap.fromTo(sparkle, {
+            scale: 0,
+            rotation: 0,
+            opacity: 0
+        }, {
+            scale: [0.5, 1.2, 0],
+            rotation: 180, // 回転を180度に制限
+            opacity: [0, 1, 0],
+            duration: 1.5,
+            ease: "power2.out",
+            onComplete: () => sparkle.remove()
+        });
+    }
+}
 
 // 成功メッセージを花火形式で表示
 function showSuccessMessage(message) {
@@ -689,368 +1231,24 @@ async function loadExistingMessages() {
             
             // メッセージがある場合は表示
             if (comments && Array.isArray(comments) && comments.length > 0) {
+                // ローディング表示をクリア
+                clearLoadingIndicator();
                 displayExistingMessages(comments);
             } else {
                 // メッセージがない場合はウェルカムメッセージを表示
+                clearLoadingIndicator();
                 displayWelcomeMessage();
             }
         } else {
             console.error('メッセージ取得エラー:', response.status, response.statusText);
             // エラーの場合はウェルカムメッセージを表示
+            clearLoadingIndicator();
             displayWelcomeMessage();
         }
     } catch (error) {
         console.error('メッセージ取得エラー:', error);
         // エラーの場合はウェルカムメッセージを表示
+        clearLoadingIndicator();
         displayWelcomeMessage();
-    }
-}
-
-// 既存メッセージを花火形式で表示する関数を修正
-function displayExistingMessages(comments) {
-    comments.forEach((comment, index) => {
-        setTimeout(() => {
-            createFireworkMessage(comment.message);
-        }, index * 500); // 0.5秒間隔で順次表示
-    });
-}
-
-// 新着メッセージも花火形式で表示
-function displayNewMessages(newMessages) {
-    newMessages.forEach((comment, index) => {
-        setTimeout(() => {
-            createFireworkMessage(comment.message);
-            // 新着メッセージには特別なエフェクト
-            setTimeout(() => {
-                createSparkleEffect();
-            }, 1000);
-        }, index * 300);
-    });
-}
-
-// タイムスタンプをフォーマットする関数
-function formatTimestamp(date) {
-    const now = new Date();
-    const diff = now - date;
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-    
-    if (minutes < 1) {
-        return 'たった今';
-    } else if (minutes < 60) {
-        return `${minutes}分前`;
-    } else if (hours < 24) {
-        return `${hours}時間前`;
-    } else if (days < 7) {
-        return `${days}日前`;
-    } else {
-        return date.toLocaleDateString('ja-JP', {
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    }
-}
-
-// スパークル効果を生成する関数
-function createSparkleEffect(targetElement) {
-    const sparkles = ['✨', '⭐', '💫', '🌟', '💖', '💕'];
-    const sparkleCount = Math.floor(Math.random() * 8) + 5;
-    
-    for (let i = 0; i < sparkleCount; i++) {
-        const sparkle = document.createElement('div');
-        sparkle.className = 'sparkle-particle';
-        sparkle.textContent = sparkles[Math.floor(Math.random() * sparkles.length)];
-        sparkle.style.position = 'absolute';
-        sparkle.style.pointerEvents = 'none';
-        sparkle.style.zIndex = '1000';
-        sparkle.style.fontSize = Math.random() * 8 + 12 + 'px';
-        
-        // ターゲット要素の位置を基準にスパークルを配置
-        const rect = targetElement.getBoundingClientRect();
-        const containerRect = messagesContainer.getBoundingClientRect();
-        
-        sparkle.style.left = (rect.left - containerRect.left + Math.random() * rect.width) + 'px';
-        sparkle.style.top = (rect.top - containerRect.top + Math.random() * rect.height) + 'px';
-        
-        messagesContainer.appendChild(sparkle);
-        
-        // ランダムな方向と距離でアニメーション
-        const angle = Math.random() * Math.PI * 2;
-        const distance = Math.random() * 50 + 30;
-        const targetX = Math.cos(angle) * distance;
-        const targetY = Math.sin(angle) * distance;
-          gsap.fromTo(sparkle, 
-            { 
-                opacity: 0, 
-                scale: 0.3,
-                rotation: 0
-            },
-            { 
-                opacity: 1, 
-                scale: 1.2,
-                rotation: 120, // 回転を120度に制限
-                duration: 0.3,
-                ease: "power2.out",
-                onComplete: () => {                    // フェードアウトしながら移動
-                    gsap.to(sparkle, {
-                        x: targetX,
-                        y: targetY,
-                        opacity: 0,
-                        scale: 0.5,
-                        rotation: 180, // 回転を180度に制限
-                        duration: 0.8,
-                        ease: "power2.in",
-                        onComplete: () => sparkle.remove()
-                    });
-                }
-            }
-        );
-    }
-}
-
-// 音波効果を生成する関数
-function createSoundWaveEffect(targetElement) {
-    const rect = targetElement.getBoundingClientRect();
-    const containerRect = messagesContainer.getBoundingClientRect();
-    
-    // 中心点を計算
-    const centerX = rect.left - containerRect.left + rect.width / 2;
-    const centerY = rect.top - containerRect.top + rect.height / 2;
-    
-    // 複数の同心円を作成
-    for (let i = 0; i < 3; i++) {
-        const wave = document.createElement('div');
-        wave.style.position = 'absolute';
-        wave.style.left = centerX + 'px';
-        wave.style.top = centerY + 'px';
-        wave.style.width = '0px';
-        wave.style.height = '0px';
-        wave.style.border = '2px solid rgba(255, 215, 0, 0.6)';
-        wave.style.borderRadius = '50%';
-        wave.style.pointerEvents = 'none';
-        wave.style.transform = 'translate(-50%, -50%)';
-        wave.style.zIndex = '999';
-        
-        messagesContainer.appendChild(wave);
-        
-        gsap.to(wave, {
-            width: '100px',
-            height: '100px',
-            opacity: 0,
-            duration: 1,
-            delay: i * 0.2,
-            ease: "power2.out",
-            onComplete: () => wave.remove()
-        });
-    }
-}
-
-// 定期的なお祝いエフェクトを開始する関数
-function startPeriodicCelebration() {
-    // 20-40秒ごとにランダムでかわいいエフェクトを実行
-    setInterval(() => {
-        if (Math.random() < 0.7) { // 70%の確率でエフェクト実行
-            const effects = [
-                createHeartRain,
-                createStarShower,
-                createBubbleFloat,
-                createRainbowEffect,
-                createConfettiStorm
-            ];
-            
-            const randomEffect = effects[Math.floor(Math.random() * effects.length)];
-            randomEffect();
-        }
-    }, Math.random() * 20000 + 20000); // 20-40秒のランダム間隔
-}
-
-// ハートの雨エフェクト
-function createHeartRain() {
-    const hearts = ['💖', '💗', '💕', '💝', '💞'];
-    const heartCount = Math.floor(Math.random() * 8) + 5;
-    
-    for (let i = 0; i < heartCount; i++) {
-        setTimeout(() => {
-            const heart = document.createElement('div');
-            heart.textContent = hearts[Math.floor(Math.random() * hearts.length)];
-            heart.style.position = 'fixed';
-            heart.style.left = Math.random() * window.innerWidth + 'px';
-            heart.style.top = '-50px';
-            heart.style.fontSize = Math.random() * 15 + 20 + 'px';
-            heart.style.pointerEvents = 'none';
-            heart.style.zIndex = '1000';
-            heart.style.filter = 'drop-shadow(0 0 10px rgba(255, 182, 193, 0.8))';
-            
-            document.body.appendChild(heart);
-            
-            gsap.to(heart, {
-                y: window.innerHeight + 100,
-                x: (Math.random() - 0.5) * 100,
-                rotation: Math.random() * 360,
-                duration: Math.random() * 3 + 4,
-                ease: "none",
-                onComplete: () => heart.remove()
-            });
-        }, i * 200);
-    }
-}
-
-// 星のシャワーエフェクト
-function createStarShower() {
-    const stars = ['⭐', '🌟', '✨', '💫', '🌠'];
-    const starCount = Math.floor(Math.random() * 10) + 8;
-    
-    for (let i = 0; i < starCount; i++) {
-        setTimeout(() => {
-            const star = document.createElement('div');
-            star.textContent = stars[Math.floor(Math.random() * stars.length)];
-            star.style.position = 'fixed';
-            star.style.left = Math.random() * window.innerWidth + 'px';
-            star.style.top = '-50px';
-            star.style.fontSize = Math.random() * 12 + 16 + 'px';
-            star.style.pointerEvents = 'none';
-            star.style.zIndex = '1000';
-            star.style.filter = 'drop-shadow(0 0 8px rgba(255, 215, 0, 0.8))';
-            
-            document.body.appendChild(star);
-            
-            gsap.to(star, {
-                y: window.innerHeight + 100,
-                x: (Math.random() - 0.5) * 150,
-                rotation: Math.random() * 720,
-                scale: [1, 1.5, 0.5],
-                duration: Math.random() * 4 + 3,
-                ease: "power2.out",
-                onComplete: () => star.remove()
-            });
-        }, i * 150);
-    }
-}
-
-// バブル浮遊エフェクト
-function createBubbleFloat() {
-    const bubbles = ['🫧', '💙', '🩵', '💎', '🔮'];
-    const bubbleCount = Math.floor(Math.random() * 6) + 4;
-    
-    for (let i = 0; i < bubbleCount; i++) {
-        setTimeout(() => {
-            const bubble = document.createElement('div');
-            bubble.textContent = bubbles[Math.floor(Math.random() * bubbles.length)];
-            bubble.style.position = 'fixed';
-            bubble.style.left = Math.random() * window.innerWidth + 'px';
-            bubble.style.bottom = '-50px';
-            bubble.style.fontSize = Math.random() * 10 + 18 + 'px';
-            bubble.style.pointerEvents = 'none';
-            bubble.style.zIndex = '1000';
-            bubble.style.filter = 'drop-shadow(0 0 6px rgba(173, 216, 230, 0.8))';
-            
-            document.body.appendChild(bubble);
-            
-            gsap.to(bubble, {
-                y: -(window.innerHeight + 100),
-                x: (Math.random() - 0.5) * 80,
-                rotation: Math.random() * 360,
-                scale: [0.8, 1.2, 0.6],
-                duration: Math.random() * 5 + 5,
-                ease: "sine.inOut",
-                onComplete: () => bubble.remove()
-            });
-        }, i * 300);
-    }
-}
-
-// レインボーエフェクト
-function createRainbowEffect() {
-    const colors = ['🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '🩷'];
-    
-    colors.forEach((color, index) => {
-        setTimeout(() => {
-            const rainbow = document.createElement('div');
-            rainbow.textContent = color;
-            rainbow.style.position = 'fixed';
-            rainbow.style.left = '-50px';
-            rainbow.style.top = Math.random() * (window.innerHeight - 100) + 50 + 'px';
-            rainbow.style.fontSize = '30px';
-            rainbow.style.pointerEvents = 'none';
-            rainbow.style.zIndex = '1000';
-            rainbow.style.filter = 'drop-shadow(0 0 15px rgba(255, 255, 255, 0.8))';
-            
-            document.body.appendChild(rainbow);
-              gsap.to(rainbow, {
-                x: window.innerWidth + 100,
-                rotation: 180, // 回転を180度に制限
-                scale: [1, 1.5, 1],
-                duration: 3,
-                ease: "power2.inOut",
-                onComplete: () => rainbow.remove()
-            });
-        }, index * 100);
-    });
-}
-
-// 紙吹雪の嵐エフェクト
-function createConfettiStorm() {
-    const confettiColors = ['🎊', '🎉', '🎈', '🎁', '🎂', '🍰'];
-    const confettiCount = Math.floor(Math.random() * 15) + 12;
-    
-    for (let i = 0; i < confettiCount; i++) {
-        setTimeout(() => {
-            const confetti = document.createElement('div');
-            confetti.textContent = confettiColors[Math.floor(Math.random() * confettiColors.length)];
-            confetti.style.position = 'fixed';
-            confetti.style.left = Math.random() * window.innerWidth + 'px';
-            confetti.style.top = '-50px';
-            confetti.style.fontSize = Math.random() * 8 + 20 + 'px';
-            confetti.style.pointerEvents = 'none';
-            confetti.style.zIndex = '1000';
-            confetti.style.filter = 'drop-shadow(0 0 5px rgba(255, 255, 255, 0.6))';
-            
-            document.body.appendChild(confetti);
-            
-            gsap.to(confetti, {
-                y: window.innerHeight + 100,
-                x: (Math.random() - 0.5) * 200,
-                rotation: Math.random() * 720,
-                scale: [1, 0.8, 1.2, 0.6],
-                duration: Math.random() * 3 + 3,
-                ease: "power1.inOut",
-                onComplete: () => confetti.remove()
-            });
-        }, i * 100);
-    }
-}
-
-// 改良されたキラキラエフェクト
-function createSparkleEffect() {
-    const sparkles = ['✨', '⭐', '💫', '🌟', '💖', '💕'];
-    const sparkleCount = Math.floor(Math.random() * 8) + 5;
-    
-    for (let i = 0; i < sparkleCount; i++) {
-        const sparkle = document.createElement('div');
-        sparkle.textContent = sparkles[Math.floor(Math.random() * sparkles.length)];
-        sparkle.style.position = 'fixed';
-        sparkle.style.left = Math.random() * window.innerWidth + 'px';
-        sparkle.style.top = Math.random() * window.innerHeight + 'px';
-        sparkle.style.fontSize = Math.random() * 10 + 16 + 'px';
-        sparkle.style.pointerEvents = 'none';
-        sparkle.style.zIndex = '1000';
-        sparkle.style.filter = 'drop-shadow(0 0 8px rgba(255, 215, 0, 0.8))';
-        
-        document.body.appendChild(sparkle);
-          gsap.fromTo(sparkle, {
-            scale: 0,
-            rotation: 0,
-            opacity: 0
-        }, {
-            scale: [0.5, 1.2, 0],
-            rotation: 180, // 回転を180度に制限
-            opacity: [0, 1, 0],
-            duration: 1.5,
-            ease: "power2.out",
-            onComplete: () => sparkle.remove()
-        });
     }
 }
