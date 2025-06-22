@@ -3,9 +3,96 @@ let API_BASE_URL = 'http://localhost:7028/api'; // デフォルト値
 let API_KEY = ''; // APIキー
 
 // DOM要素の取得
-const messagesContainer = document.getElementById('messagesContainer');
+const fireworksArea = document.getElementById('fireworksArea');
 const messageInput = document.getElementById('messageInput');
 const effectsCanvas = document.getElementById('effectsCanvas');
+
+// 花火メッセージの配列
+let activeFireworks = [];
+
+// カラフルなグラデーション配列 - 大幅に追加
+const gradients = [
+    // 暖色系グラデーション
+    'linear-gradient(45deg, #ff6b6b, #ffa726)',
+    'linear-gradient(45deg, #ff8a80, #ff5722)',
+    'linear-gradient(135deg, #ff9a9e, #fecfef)',
+    'linear-gradient(45deg, #ff6f91, #ff9671)',
+    'linear-gradient(135deg, #ffecd2, #fcb69f)',
+    'linear-gradient(45deg, #f093fb, #f5576c)',
+    'linear-gradient(135deg, #ff758c, #ff7eb3)',
+    'linear-gradient(45deg, #ffa726, #fb8c00)',
+    
+    // 寒色系グラデーション
+    'linear-gradient(45deg, #4facfe, #00f2fe)',
+    'linear-gradient(135deg, #667eea, #764ba2)',
+    'linear-gradient(45deg, #43e97b, #38f9d7)',
+    'linear-gradient(135deg, #667eea, #a8edea)',
+    'linear-gradient(45deg, #5ee7df, #66a6ff)',
+    'linear-gradient(135deg, #4facfe, #764ba2)',
+    'linear-gradient(45deg, #74b9ff, #0984e3)',
+    'linear-gradient(135deg, #3742fa, #2f3542)',
+    
+    // パープル系グラデーション
+    'linear-gradient(45deg, #a8edea, #fed6e3)',
+    'linear-gradient(135deg, #667eea, #764ba2)',
+    'linear-gradient(45deg, #c471f5, #fa71cd)',
+    'linear-gradient(135deg, #667eea, #a8edea)',
+    'linear-gradient(45deg, #c44569, #f8b500)',
+    'linear-gradient(135deg, #6c5ce7, #a29bfe)',
+    
+    // グリーン系グラデーション
+    'linear-gradient(45deg, #56ab2f, #a8e6cf)',
+    'linear-gradient(135deg, #11998e, #38ef7d)',
+    'linear-gradient(45deg, #00b09b, #96c93d)',
+    'linear-gradient(135deg, #43e97b, #38f9d7)',
+    'linear-gradient(45deg, #2ed573, #7bed9f)',
+    
+    // ゴールド・シルバー系
+    'linear-gradient(45deg, #f7971e, #ffd200)',
+    'linear-gradient(135deg, #ffd89b, #19547b)',
+    'linear-gradient(45deg, #c9d6ff, #e2e2e2)',
+    'linear-gradient(135deg, #ddd6f3, #faaca8)',
+    'linear-gradient(45deg, #ffafbd, #ffc3a0)',
+    
+    // 虹色・マルチカラー
+    'linear-gradient(45deg, #ff0844, #ffb199)',
+    'linear-gradient(135deg, #fc466b, #3f5efb)',
+    'linear-gradient(45deg, #f093fb, #f5576c)',
+    'linear-gradient(135deg, #4facfe, #00f2fe)',
+    'linear-gradient(45deg, #667eea, #764ba2)',
+    
+    // パステル系
+    'linear-gradient(45deg, #ffeaa7, #fab1a0)',
+    'linear-gradient(135deg, #74b9ff, #e17055)',
+    'linear-gradient(45deg, #fd79a8, #fdcb6e)',
+    'linear-gradient(135deg, #6c5ce7, #fd79a8)',
+    'linear-gradient(45deg, #a29bfe, #ffeaa7)',
+    
+    // ダーク系
+    'linear-gradient(45deg, #2d3436, #636e72)',
+    'linear-gradient(135deg, #74b9ff, #0984e3)',
+    'linear-gradient(45deg, #fd79a8, #fdcb6e)',
+    'linear-gradient(135deg, #e17055, #f39c12)',
+    
+    // ネオン系
+    'linear-gradient(45deg, #00ff88, #00b8ff)',
+    'linear-gradient(135deg, #ff006e, #8338ec)',
+    'linear-gradient(45deg, #06ffa5, #f9ca24)',
+    'linear-gradient(135deg, #ff9ff3, #f368e0)',
+    'linear-gradient(45deg, #54a0ff, #5f27cd)',
+    
+    // 夕焼け・朝焼け系
+    'linear-gradient(45deg, #ff9a56, #ffad56)',
+    'linear-gradient(135deg, #ff6348, #ff7675)',
+    'linear-gradient(45deg, #fd79a8, #fa8072)',
+    'linear-gradient(135deg, #ff7675, #fab1a0)',
+    
+    // 海・空系
+    'linear-gradient(45deg, #74b9ff, #0984e3)',
+    'linear-gradient(135deg, #00cec9, #55a3ff)',
+    'linear-gradient(45deg, #74b9ff, #00b894)',
+    'linear-gradient(135deg, #0984e3, #74b9ff)'
+];
 
 // アプリケーション初期化
 document.addEventListener('DOMContentLoaded', function() {
@@ -24,19 +111,18 @@ function initializeApp() {
     
     console.log('初期化:', { API_BASE_URL, hasApiKey: !!API_KEY });
     
-    // ステータス表示を更新
-    updateStatusDisplay();
-    
     // APIの疎通確認
     checkApiConnection();
-      // 既存のメッセージを取得して表示
+      
+    // 既存のメッセージを取得して表示
     loadExistingMessages();
     
     // メッセージの定期取得を開始
     startMessagePolling();
     
-    // GSAP初期設定
-    gsap.set('.celebration-btn', { scale: 1 });
+    // 定期的なお祝いエフェクト開始
+    startPeriodicCelebration();
+      // GSAP初期設定
     gsap.set('.gift-btn', { scale: 1 });
 }
 
@@ -48,17 +134,17 @@ function setupEventListeners() {
         }
     });
     
-    // ボタンのホバーエフェクト
-    document.querySelectorAll('.celebration-btn').forEach(btn => {
-        btn.addEventListener('mouseenter', () => {
-            gsap.to(btn, { scale: 1.05, duration: 0.2, ease: "power2.out" });
-        });
+    // ウィンドウリサイズ時の対応
+    window.addEventListener('resize', function() {
+        // アクティブな花火メッセージの最大幅を再調整
+        const screenWidth = window.innerWidth;
+        const maxWidth = screenWidth > 768 ? 400 : screenWidth - 60;
         
-        btn.addEventListener('mouseleave', () => {
-            gsap.to(btn, { scale: 1, duration: 0.2, ease: "power2.out" });
+        activeFireworks.forEach(firework => {
+            firework.style.maxWidth = maxWidth + 'px';
         });
     });
-    
+      // ボタンのホバーエフェクト（ギフトボタンのみ）
     document.querySelector('.gift-btn').addEventListener('mouseenter', function() {
         gsap.to(this, { scale: 1.1, duration: 0.3, ease: "elastic.out(1, 0.3)" });
     });
@@ -68,132 +154,149 @@ function setupEventListeners() {
     });
 }
 
-function displayWelcomeMessage() {
-    const welcomeMessage = createMessageBubble('🎉 Nancop Anniversary へようこそ！', 'celebration');
-    messagesContainer.appendChild(welcomeMessage);
+// 花火メッセージを作成する関数
+function createFireworkMessage(message) {
+    const firework = document.createElement('div');
+    firework.className = 'message-firework';
+    firework.textContent = message;
     
-    // ウェルカムメッセージのアニメーション
-    gsap.fromTo(welcomeMessage, 
-        { opacity: 0, y: 50, scale: 0.8 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.6, ease: "back.out(1.7)" }
-    );
-}
-
-function createMessageBubble(message, type = 'user') {
-    const bubble = document.createElement('div');
-    bubble.className = `message-bubble ${type}`;
-    bubble.textContent = message;
-    return bubble;
+    // メッセージ内容に応じてグラデーションを選択
+    let selectedGradient;
+    
+    // 特定のキーワードに応じて色合いを変更
+    if (message.includes('❤️') || message.includes('💖') || message.includes('💕') || message.includes('愛') || message.includes('好き')) {
+        // 愛情系：暖色系グラデーション
+        const loveGradients = gradients.slice(0, 8); // 暖色系の最初の8個
+        selectedGradient = loveGradients[Math.floor(Math.random() * loveGradients.length)];
+    } else if (message.includes('🎉') || message.includes('🎊') || message.includes('おめでとう') || message.includes('祝')) {
+        // お祝い系：明るい多色グラデーション
+        const celebrationGradients = gradients.slice(32, 42); // 虹色・マルチカラー系
+        selectedGradient = celebrationGradients[Math.floor(Math.random() * celebrationGradients.length)];
+    } else if (message.includes('✨') || message.includes('⭐') || message.includes('🌟') || message.includes('キラキラ')) {
+        // キラキラ系：ゴールド・シルバー系
+        const sparkleGradients = gradients.slice(24, 32); // ゴールド・シルバー系
+        selectedGradient = sparkleGradients[Math.floor(Math.random() * sparkleGradients.length)];
+    } else if (message.includes('🌊') || message.includes('💙') || message.includes('青') || message.includes('海') || message.includes('空')) {
+        // 海・空系：寒色系グラデーション
+        const blueGradients = gradients.slice(8, 16); // 寒色系
+        selectedGradient = blueGradients[Math.floor(Math.random() * blueGradients.length)];
+    } else if (message.includes('🌸') || message.includes('桜') || message.includes('春') || message.includes('ピンク')) {
+        // 春・桜系：パステル系
+        const pastelGradients = gradients.slice(42, 48); // パステル系
+        selectedGradient = pastelGradients[Math.floor(Math.random() * pastelGradients.length)];
+    } else if (message.includes('🔥') || message.includes('熱い') || message.includes('情熱') || message.includes('やふ')) {
+        // 熱情・エネルギー系：ネオン系
+        const energyGradients = gradients.slice(52, 58); // ネオン系
+        selectedGradient = energyGradients[Math.floor(Math.random() * energyGradients.length)];
+    } else {
+        // 通常のメッセージ：全ての中からランダム
+        selectedGradient = gradients[Math.floor(Math.random() * gradients.length)];
+    }
+    
+    firework.style.background = selectedGradient;
+    
+    // レスポンシブ対応：画面サイズに応じてメッセージ幅を調整
+    const screenWidth = window.innerWidth;
+    const maxWidth = screenWidth > 768 ? 400 : screenWidth - 60;
+    firework.style.maxWidth = maxWidth + 'px';
+    
+    // 画面の下部からランダムな横位置でスタート（マージンを考慮）
+    const margin = screenWidth > 768 ? 100 : 30;
+    const startX = Math.random() * (screenWidth - maxWidth - margin * 2) + margin;
+    const startY = window.innerHeight;
+    
+    firework.style.left = startX + 'px';
+    firework.style.bottom = '0px';
+    
+    fireworksArea.appendChild(firework);
+    
+    // 花火のような軌道でアニメーション（横移動を控えめに）
+    const endX = startX + (Math.random() - 0.5) * 80; // 横移動を80pxに制限
+    const endY = Math.random() * (window.innerHeight * 0.3) + window.innerHeight * 0.2; // 画面の20%-50%の高さ
+    const duration = Math.random() * 2 + 3; // 3-5秒のランダム
+    
+    // GSAPで打ち上げアニメーション（回転を控えめに）
+    gsap.fromTo(firework, {
+        scale: 0.5,
+        opacity: 0,
+        rotation: Math.random() * 60 - 30 // -30度から30度の範囲に制限
+    }, {
+        scale: 1,
+        opacity: 1,
+        rotation: 0,
+        duration: 0.5,
+        ease: "back.out(1.7)"
+    });
+    
+    gsap.to(firework, {
+        x: endX - startX,
+        y: -endY,
+        duration: duration,
+        ease: "power2.out",
+        onComplete: () => {
+            // フェードアウト
+            gsap.to(firework, {
+                opacity: 0,
+                scale: 0.8,
+                duration: 1,
+                ease: "power2.inOut",
+                onComplete: () => {
+                    if (firework.parentNode) {
+                        firework.parentNode.removeChild(firework);
+                    }
+                    // activeFireworksから削除
+                    const index = activeFireworks.indexOf(firework);
+                    if (index > -1) {
+                        activeFireworks.splice(index, 1);
+                    }
+                }
+            });
+        }
+    });
+    
+    // 回転を大幅に減らす（ゆっくりと軽い回転のみ）
+    gsap.to(firework, {
+        rotation: (Math.random() - 0.5) * 60, // -30度から30度のゆっくりした回転
+        duration: duration + 1,
+        ease: "sine.inOut"
+    });
+    
+    activeFireworks.push(firework);
+    return firework;
 }
 
 async function sendMessage() {
     const message = messageInput.value.trim();
     if (!message) return;
     
-    // メッセージをUIに追加
-    const messageBubble = createMessageBubble(message, 'user');
-    messagesContainer.appendChild(messageBubble);
+    // 花火メッセージを作成
+    createFireworkMessage(message);
     
     // 入力フィールドをクリア
     messageInput.value = '';
-      // ランダムなアニメーション効果を選択
-    const userAnimations = [
-        // 標準の右からスライド
-        {
-            from: { opacity: 0, x: 50, scale: 0.8 },
-            to: { opacity: 1, x: 0, scale: 1, duration: 0.4, ease: "power2.out" }
-        },
-        // バウンス入場
-        {
-            from: { opacity: 0, scale: 0.5, rotation: 10 },
-            to: { opacity: 1, scale: 1, rotation: 0, duration: 0.6, ease: "elastic.out(1, 0.3)" }
-        },
-        // 3D回転
-        {
-            from: { opacity: 0, rotationY: 90, scale: 0.9 },
-            to: { opacity: 1, rotationY: 0, scale: 1, duration: 0.5, ease: "back.out(1.7)" }
-        }
-    ];
-    
-    const randomUserAnimation = userAnimations[Math.floor(Math.random() * userAnimations.length)];
-    
-    gsap.fromTo(messageBubble, randomUserAnimation.from, {
-        ...randomUserAnimation.to,
-        onComplete: () => {
-            // 送信成功時にランダムでキラキラ効果
-            if (Math.random() < 0.5) {
-                createSparkleEffect(messageBubble);
-            }
-        }
-    });
-      // スクロールを下に
-    scrollToBottom();
     
     // APIにメッセージを送信
     const result = await sendMessageToAPI(message);
-    if (result) {
-        createFloatingHearts();
+    if (result) {        // 成功時にキラキラエフェクト
+        createSparkleEffect();
     }
 }
 
-function sendCelebration(celebrationText) {
-    const messageBubble = createMessageBubble(celebrationText, 'celebration');
-    messagesContainer.appendChild(messageBubble);
-    
-    // お祝いメッセージのアニメーション
-    gsap.fromTo(messageBubble,
-        { opacity: 0, scale: 0.5, rotation: -10 },
-        { 
-            opacity: 1, 
-            scale: 1, 
-            rotation: 0, 
-            duration: 0.6, 
-            ease: "elastic.out(1, 0.5)",
-            onComplete: () => {
-                // バウンスエフェクト
-                gsap.to(messageBubble, {
-                    y: -10,
-                    duration: 0.3,
-                    yoyo: true,
-                    repeat: 1,
-                    ease: "power2.inOut"
-                });
-            }
-        }
-    );
-    
-    // 紙吹雪エフェクト
-    createConfettiEffect();
-    
-    // スクロールを下に
-    scrollToBottom();
-    
-    // APIに送信
-    sendMessageToAPI(celebrationText);
-}
-
 function sendGift() {
-    const giftMessage = '🎁 ギフトが届きました！';
-    const messageBubble = createMessageBubble(giftMessage, 'gift');
-    messagesContainer.appendChild(messageBubble);
+    const giftMessage = '🎁 ギフト爆弾！';
+    const firework = createFireworkMessage(giftMessage);
     
-    // ギフトメッセージのアニメーション
-    gsap.fromTo(messageBubble,
-        { opacity: 0, scale: 0, rotation: 360 },
-        { 
-            opacity: 1, 
-            scale: 1, 
-            rotation: 0, 
-            duration: 0.8, 
-            ease: "back.out(1.7)"
-        }
-    );
+    // ギフト専用のエフェクト
+    gsap.to(firework, {
+        scale: 1.3,
+        duration: 0.3,
+        yoyo: true,
+        repeat: 3,
+        ease: "power2.inOut"
+    });
     
     // ギフト爆弾エフェクト
     createGiftExplosion();
-    
-    // スクロールを下に
-    scrollToBottom();
     
     // APIに送信
     sendMessageToAPI(giftMessage);
@@ -352,13 +455,7 @@ function createGiftExplosion() {
     }
 }
 
-function scrollToBottom() {
-    gsap.to(messagesContainer, {
-        scrollTop: messagesContainer.scrollHeight,
-        duration: 0.5,
-        ease: "power2.out"
-    });
-}
+// スクロール機能は花火形式では不要
 
 // 定期的にメッセージを取得する関数
 let lastMessageCount = 0;
@@ -394,60 +491,18 @@ function startMessagePolling() {
     }, 3000); // 3秒ごとに確認
 }
 
-// 新しいメッセージをランダムなタイミングで表示する関数
+// 新しいメッセージを花火形式で表示する関数
 function displayNewMessages(newMessages) {
     newMessages.forEach((comment, index) => {
         // ランダムな遅延時間（500ms〜2000ms）
         const randomDelay = Math.random() * 1500 + 500;
         
         setTimeout(() => {
-            const messageType = comment.message.includes('🎉') || comment.message.includes('🎊') || 
-                               comment.message.includes('おめでと') || comment.message.includes('🎁') ? 'celebration' : 'user';
-            
-            const messageBubble = createMessageBubble(comment.message, messageType);
-            
-            // タイムスタンプがある場合は表示
-            if (comment.timestamp) {
-                const timestamp = new Date(comment.timestamp);
-                const timeText = document.createElement('div');
-                timeText.className = 'message-timestamp';
-                timeText.textContent = formatTimestamp(timestamp);
-                messageBubble.appendChild(timeText);
-            }
-            
-            messagesContainer.appendChild(messageBubble);
-            
-            // 新着メッセージ専用のアニメーション（より派手に）
-            const newMessageAnimations = [
-                {
-                    from: { opacity: 0, scale: 0.1, rotation: 180 },
-                    to: { opacity: 1, scale: 1, rotation: 0, duration: 0.8, ease: "elastic.out(1, 0.3)" }
-                },
-                {
-                    from: { opacity: 0, y: -100, scale: 0.5 },
-                    to: { opacity: 1, y: 0, scale: 1, duration: 0.7, ease: "bounce.out" }
-                },
-                {
-                    from: { opacity: 0, rotationX: 90, z: -100 },
-                    to: { opacity: 1, rotationX: 0, z: 0, duration: 0.6, ease: "power3.out" }
-                }
-            ];
-            
-            const randomAnimation = newMessageAnimations[Math.floor(Math.random() * newMessageAnimations.length)];
-            
-            gsap.fromTo(messageBubble, randomAnimation.from, {
-                ...randomAnimation.to,
-                onComplete: () => {
-                    // 新着メッセージには必ずスパークル効果
-                    createSparkleEffect(messageBubble);
-                    
-                    // 音効果のシミュレーション（視覚的な表現）
-                    createSoundWaveEffect(messageBubble);
-                }
-            });
-            
-            scrollToBottom();
-            
+            createFireworkMessage(comment.message);
+            // 新着メッセージには特別なエフェクト
+            setTimeout(() => {
+                createSparkleEffect();
+            }, 1000);
         }, randomDelay);
     });
 }
@@ -466,72 +521,17 @@ function cleanupParticles() {
 // 定期的にパーティクルをクリーンアップ
 setInterval(cleanupParticles, 5000);
 
-// 成功メッセージを表示
+// 成功メッセージを花火形式で表示
 function showSuccessMessage(message) {
-    const successBubble = createMessageBubble(`✅ ${message}`, 'celebration');
-    messagesContainer.appendChild(successBubble);
-    
-    gsap.fromTo(successBubble,
-        { opacity: 0, scale: 0.5 },
-        { 
-            opacity: 1, 
-            scale: 1, 
-            duration: 0.5, 
-            ease: "back.out(1.7)",
-            onComplete: () => {
-                // 3秒後にフェードアウト
-                setTimeout(() => {
-                    gsap.to(successBubble, {
-                        opacity: 0,
-                        scale: 0.8,
-                        duration: 0.3,
-                        ease: "power2.in",
-                        onComplete: () => successBubble.remove()
-                    });
-                }, 3000);
-            }
-        }
-    );
-    
-    scrollToBottom();
+    createFireworkMessage(`✅ ${message}`);
+    createSparkleEffect();
 }
 
-// エラーメッセージを表示
+// エラーメッセージを花火形式で表示
 function showErrorMessage(message) {
-    const errorBubble = createMessageBubble(`❌ ${message}`, 'user');
-    errorBubble.style.background = 'linear-gradient(45deg, #ff6b6b, #ff5252)';
-    messagesContainer.appendChild(errorBubble);
-    
-    gsap.fromTo(errorBubble,
-        { opacity: 0, x: -50 },
-        { 
-            opacity: 1, 
-            x: 0, 
-            duration: 0.4, 
-            ease: "power2.out",
-            onComplete: () => {
-                // シェイクエフェクト
-                gsap.to(errorBubble, {
-                    x: [-5, 5, -5, 5, 0],
-                    duration: 0.5,
-                    ease: "power2.inOut"
-                });
-                
-                // 5秒後にフェードアウト
-                setTimeout(() => {
-                    gsap.to(errorBubble, {
-                        opacity: 0,
-                        scale: 0.8,
-                        duration: 0.3,
-                        ease: "power2.in",
-                        onComplete: () => errorBubble.remove()
-                    });
-                }, 5000);
-            }
-        }
-    );
-    
-    scrollToBottom();
+    const errorFirework = createFireworkMessage(`❌ ${message}`);
+    // エラーメッセージは赤いグラデーション
+    errorFirework.style.background = 'linear-gradient(45deg, #ff6b6b, #ff5252)';
 }
 
 // HTTPリクエストの詳細ログを表示（デバッグ用）
@@ -706,89 +706,26 @@ async function loadExistingMessages() {
     }
 }
 
-// 既存メッセージを表示する関数
+// 既存メッセージを花火形式で表示する関数を修正
 function displayExistingMessages(comments) {
-    // まずウェルカムメッセージを表示
-    const welcomeMessage = createMessageBubble('🎉 Nancop Anniversary へようこそ！', 'celebration');
-    messagesContainer.appendChild(welcomeMessage);
-    
-    // ウェルカムメッセージのアニメーション
-    gsap.fromTo(welcomeMessage, 
-        { opacity: 0, y: 50, scale: 0.8 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.6, ease: "back.out(1.7)" }
-    );
-    
-    // ランダムな順序でコメントを表示するためのインデックス配列を作成
-    const shuffledIndices = [...Array(comments.length).keys()];
-    
-    // 既存のコメントをランダムなタイミングで表示
     comments.forEach((comment, index) => {
-        // ランダムな遅延時間を生成（300ms〜1500ms）
-        const randomDelay = Math.random() * 1200 + 300;
-        
         setTimeout(() => {
-            const messageType = comment.message.includes('🎉') || comment.message.includes('🎊') || 
-                               comment.message.includes('おめでと') || comment.message.includes('🎁') ? 'celebration' : 'user';
-            
-            const messageBubble = createMessageBubble(comment.message, messageType);
-            
-            // タイムスタンプがある場合は表示
-            if (comment.timestamp) {
-                const timestamp = new Date(comment.timestamp);
-                const timeText = document.createElement('div');
-                timeText.className = 'message-timestamp';
-                timeText.textContent = formatTimestamp(timestamp);
-                messageBubble.appendChild(timeText);
-            }
-            
-            messagesContainer.appendChild(messageBubble);
-            
-            // バラエティに富んだアニメーション効果をランダムに選択
-            const animationTypes = [
-                // 標準のフェードイン
-                {
-                    from: { opacity: 0, y: 30, scale: 0.9 },
-                    to: { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: "power2.out" }
-                },
-                // 左からスライドイン
-                {
-                    from: { opacity: 0, x: -50, rotation: -5 },
-                    to: { opacity: 1, x: 0, rotation: 0, duration: 0.6, ease: "back.out(1.2)" }
-                },
-                // 右からスライドイン
-                {
-                    from: { opacity: 0, x: 50, rotation: 5 },
-                    to: { opacity: 1, x: 0, rotation: 0, duration: 0.6, ease: "back.out(1.2)" }
-                },
-                // バウンス効果
-                {
-                    from: { opacity: 0, scale: 0.3, rotation: 10 },
-                    to: { opacity: 1, scale: 1, rotation: 0, duration: 0.8, ease: "elastic.out(1, 0.5)" }
-                },
-                // 縦回転
-                {
-                    from: { opacity: 0, rotationX: 90, scale: 0.8 },
-                    to: { opacity: 1, rotationX: 0, scale: 1, duration: 0.7, ease: "power3.out" }
-                }
-            ];
-            
-            const randomAnimation = animationTypes[Math.floor(Math.random() * animationTypes.length)];
-            
-            gsap.fromTo(messageBubble, randomAnimation.from, randomAnimation.to);
-            
-            // ランダムでスパークル効果を追加
-            if (Math.random() < 0.3) { // 30%の確率で
-                createSparkleEffect(messageBubble);
-            }
-            
-        }, randomDelay);
+            createFireworkMessage(comment.message);
+        }, index * 500); // 0.5秒間隔で順次表示
     });
-    
-    // 最後のメッセージが表示された後にスクロール
-    const maxDelay = Math.max(...comments.map((_, index) => Math.random() * 1200 + 300));
-    setTimeout(() => {
-        scrollToBottom();
-    }, maxDelay + 1000);
+}
+
+// 新着メッセージも花火形式で表示
+function displayNewMessages(newMessages) {
+    newMessages.forEach((comment, index) => {
+        setTimeout(() => {
+            createFireworkMessage(comment.message);
+            // 新着メッセージには特別なエフェクト
+            setTimeout(() => {
+                createSparkleEffect();
+            }, 1000);
+        }, index * 300);
+    });
 }
 
 // タイムスタンプをフォーマットする関数
@@ -819,8 +756,8 @@ function formatTimestamp(date) {
 
 // スパークル効果を生成する関数
 function createSparkleEffect(targetElement) {
-    const sparkles = ['✨', '⭐', '💫', '🌟', '💖'];
-    const sparkleCount = Math.floor(Math.random() * 5) + 3; // 3-7個のスパークル
+    const sparkles = ['✨', '⭐', '💫', '🌟', '💖', '💕'];
+    const sparkleCount = Math.floor(Math.random() * 8) + 5;
     
     for (let i = 0; i < sparkleCount; i++) {
         const sparkle = document.createElement('div');
@@ -845,8 +782,7 @@ function createSparkleEffect(targetElement) {
         const distance = Math.random() * 50 + 30;
         const targetX = Math.cos(angle) * distance;
         const targetY = Math.sin(angle) * distance;
-        
-        gsap.fromTo(sparkle, 
+          gsap.fromTo(sparkle, 
             { 
                 opacity: 0, 
                 scale: 0.3,
@@ -855,17 +791,16 @@ function createSparkleEffect(targetElement) {
             { 
                 opacity: 1, 
                 scale: 1.2,
-                rotation: 360,
+                rotation: 120, // 回転を120度に制限
                 duration: 0.3,
                 ease: "power2.out",
-                onComplete: () => {
-                    // フェードアウトしながら移動
+                onComplete: () => {                    // フェードアウトしながら移動
                     gsap.to(sparkle, {
                         x: targetX,
                         y: targetY,
                         opacity: 0,
                         scale: 0.5,
-                        rotation: 720,
+                        rotation: 180, // 回転を180度に制限
                         duration: 0.8,
                         ease: "power2.in",
                         onComplete: () => sparkle.remove()
@@ -909,6 +844,213 @@ function createSoundWaveEffect(targetElement) {
             delay: i * 0.2,
             ease: "power2.out",
             onComplete: () => wave.remove()
+        });
+    }
+}
+
+// 定期的なお祝いエフェクトを開始する関数
+function startPeriodicCelebration() {
+    // 20-40秒ごとにランダムでかわいいエフェクトを実行
+    setInterval(() => {
+        if (Math.random() < 0.7) { // 70%の確率でエフェクト実行
+            const effects = [
+                createHeartRain,
+                createStarShower,
+                createBubbleFloat,
+                createRainbowEffect,
+                createConfettiStorm
+            ];
+            
+            const randomEffect = effects[Math.floor(Math.random() * effects.length)];
+            randomEffect();
+        }
+    }, Math.random() * 20000 + 20000); // 20-40秒のランダム間隔
+}
+
+// ハートの雨エフェクト
+function createHeartRain() {
+    const hearts = ['💖', '💗', '💕', '💝', '💞'];
+    const heartCount = Math.floor(Math.random() * 8) + 5;
+    
+    for (let i = 0; i < heartCount; i++) {
+        setTimeout(() => {
+            const heart = document.createElement('div');
+            heart.textContent = hearts[Math.floor(Math.random() * hearts.length)];
+            heart.style.position = 'fixed';
+            heart.style.left = Math.random() * window.innerWidth + 'px';
+            heart.style.top = '-50px';
+            heart.style.fontSize = Math.random() * 15 + 20 + 'px';
+            heart.style.pointerEvents = 'none';
+            heart.style.zIndex = '1000';
+            heart.style.filter = 'drop-shadow(0 0 10px rgba(255, 182, 193, 0.8))';
+            
+            document.body.appendChild(heart);
+            
+            gsap.to(heart, {
+                y: window.innerHeight + 100,
+                x: (Math.random() - 0.5) * 100,
+                rotation: Math.random() * 360,
+                duration: Math.random() * 3 + 4,
+                ease: "none",
+                onComplete: () => heart.remove()
+            });
+        }, i * 200);
+    }
+}
+
+// 星のシャワーエフェクト
+function createStarShower() {
+    const stars = ['⭐', '🌟', '✨', '💫', '🌠'];
+    const starCount = Math.floor(Math.random() * 10) + 8;
+    
+    for (let i = 0; i < starCount; i++) {
+        setTimeout(() => {
+            const star = document.createElement('div');
+            star.textContent = stars[Math.floor(Math.random() * stars.length)];
+            star.style.position = 'fixed';
+            star.style.left = Math.random() * window.innerWidth + 'px';
+            star.style.top = '-50px';
+            star.style.fontSize = Math.random() * 12 + 16 + 'px';
+            star.style.pointerEvents = 'none';
+            star.style.zIndex = '1000';
+            star.style.filter = 'drop-shadow(0 0 8px rgba(255, 215, 0, 0.8))';
+            
+            document.body.appendChild(star);
+            
+            gsap.to(star, {
+                y: window.innerHeight + 100,
+                x: (Math.random() - 0.5) * 150,
+                rotation: Math.random() * 720,
+                scale: [1, 1.5, 0.5],
+                duration: Math.random() * 4 + 3,
+                ease: "power2.out",
+                onComplete: () => star.remove()
+            });
+        }, i * 150);
+    }
+}
+
+// バブル浮遊エフェクト
+function createBubbleFloat() {
+    const bubbles = ['🫧', '💙', '🩵', '💎', '🔮'];
+    const bubbleCount = Math.floor(Math.random() * 6) + 4;
+    
+    for (let i = 0; i < bubbleCount; i++) {
+        setTimeout(() => {
+            const bubble = document.createElement('div');
+            bubble.textContent = bubbles[Math.floor(Math.random() * bubbles.length)];
+            bubble.style.position = 'fixed';
+            bubble.style.left = Math.random() * window.innerWidth + 'px';
+            bubble.style.bottom = '-50px';
+            bubble.style.fontSize = Math.random() * 10 + 18 + 'px';
+            bubble.style.pointerEvents = 'none';
+            bubble.style.zIndex = '1000';
+            bubble.style.filter = 'drop-shadow(0 0 6px rgba(173, 216, 230, 0.8))';
+            
+            document.body.appendChild(bubble);
+            
+            gsap.to(bubble, {
+                y: -(window.innerHeight + 100),
+                x: (Math.random() - 0.5) * 80,
+                rotation: Math.random() * 360,
+                scale: [0.8, 1.2, 0.6],
+                duration: Math.random() * 5 + 5,
+                ease: "sine.inOut",
+                onComplete: () => bubble.remove()
+            });
+        }, i * 300);
+    }
+}
+
+// レインボーエフェクト
+function createRainbowEffect() {
+    const colors = ['🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '🩷'];
+    
+    colors.forEach((color, index) => {
+        setTimeout(() => {
+            const rainbow = document.createElement('div');
+            rainbow.textContent = color;
+            rainbow.style.position = 'fixed';
+            rainbow.style.left = '-50px';
+            rainbow.style.top = Math.random() * (window.innerHeight - 100) + 50 + 'px';
+            rainbow.style.fontSize = '30px';
+            rainbow.style.pointerEvents = 'none';
+            rainbow.style.zIndex = '1000';
+            rainbow.style.filter = 'drop-shadow(0 0 15px rgba(255, 255, 255, 0.8))';
+            
+            document.body.appendChild(rainbow);
+              gsap.to(rainbow, {
+                x: window.innerWidth + 100,
+                rotation: 180, // 回転を180度に制限
+                scale: [1, 1.5, 1],
+                duration: 3,
+                ease: "power2.inOut",
+                onComplete: () => rainbow.remove()
+            });
+        }, index * 100);
+    });
+}
+
+// 紙吹雪の嵐エフェクト
+function createConfettiStorm() {
+    const confettiColors = ['🎊', '🎉', '🎈', '🎁', '🎂', '🍰'];
+    const confettiCount = Math.floor(Math.random() * 15) + 12;
+    
+    for (let i = 0; i < confettiCount; i++) {
+        setTimeout(() => {
+            const confetti = document.createElement('div');
+            confetti.textContent = confettiColors[Math.floor(Math.random() * confettiColors.length)];
+            confetti.style.position = 'fixed';
+            confetti.style.left = Math.random() * window.innerWidth + 'px';
+            confetti.style.top = '-50px';
+            confetti.style.fontSize = Math.random() * 8 + 20 + 'px';
+            confetti.style.pointerEvents = 'none';
+            confetti.style.zIndex = '1000';
+            confetti.style.filter = 'drop-shadow(0 0 5px rgba(255, 255, 255, 0.6))';
+            
+            document.body.appendChild(confetti);
+            
+            gsap.to(confetti, {
+                y: window.innerHeight + 100,
+                x: (Math.random() - 0.5) * 200,
+                rotation: Math.random() * 720,
+                scale: [1, 0.8, 1.2, 0.6],
+                duration: Math.random() * 3 + 3,
+                ease: "power1.inOut",
+                onComplete: () => confetti.remove()
+            });
+        }, i * 100);
+    }
+}
+
+// 改良されたキラキラエフェクト
+function createSparkleEffect() {
+    const sparkles = ['✨', '⭐', '💫', '🌟', '💖', '💕'];
+    const sparkleCount = Math.floor(Math.random() * 8) + 5;
+    
+    for (let i = 0; i < sparkleCount; i++) {
+        const sparkle = document.createElement('div');
+        sparkle.textContent = sparkles[Math.floor(Math.random() * sparkles.length)];
+        sparkle.style.position = 'fixed';
+        sparkle.style.left = Math.random() * window.innerWidth + 'px';
+        sparkle.style.top = Math.random() * window.innerHeight + 'px';
+        sparkle.style.fontSize = Math.random() * 10 + 16 + 'px';
+        sparkle.style.pointerEvents = 'none';
+        sparkle.style.zIndex = '1000';
+        sparkle.style.filter = 'drop-shadow(0 0 8px rgba(255, 215, 0, 0.8))';
+        
+        document.body.appendChild(sparkle);
+          gsap.fromTo(sparkle, {
+            scale: 0,
+            rotation: 0,
+            opacity: 0
+        }, {
+            scale: [0.5, 1.2, 0],
+            rotation: 180, // 回転を180度に制限
+            opacity: [0, 1, 0],
+            duration: 1.5,
+            ease: "power2.out",
+            onComplete: () => sparkle.remove()
         });
     }
 }

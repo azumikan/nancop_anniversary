@@ -21,8 +21,8 @@ public class GetComments
             "nancopa", 
             "messages", 
             Connection = "CosmosDBConnection",
-            SqlQuery = "SELECT * FROM c ORDER BY c.timestamp DESC OFFSET 0 LIMIT 100")] 
-        IEnumerable<Comment> comments)    {
+            SqlQuery = "SELECT * FROM c ORDER BY RAND() OFFSET 0 LIMIT 100")] 
+        IEnumerable<Comment> comments){
         _logger.LogInformation("GetComments function processed a request.");
 
         // OPTIONSリクエストの場合（CORSプリフライト）
