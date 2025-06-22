@@ -11,7 +11,16 @@ body {
     background-size: 400% 400%;
     animation: gradientShift 8s ease infinite;
     height: 100vh;
+    height: 100dvh; /* モバイル対応 */
     overflow: hidden;
+    /* モバイルスクロール無効化 */
+    position: fixed;
+    width: 100%;
+    touch-action: none;
+    /* セーフエリア対応のパディング */
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
 }
 
 @keyframes gradientShift {
@@ -22,6 +31,7 @@ body {
 
 .app-container {
     height: 100vh;
+    height: 100dvh; /* モバイル対応 */
     display: flex;
     flex-direction: column;
     max-width: 480px;
@@ -29,6 +39,11 @@ body {
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
     position: relative;
+    /* モバイル対応 */
+    min-height: 100vh;
+    min-height: 100dvh;
+    /* iOS Safariでの高さ調整 */
+    min-height: -webkit-fill-available;
 }
 
 /* ヘッダー */
@@ -73,7 +88,7 @@ body {
     font-size: 1.1rem;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    pointer-events: none;
+    pointer-events: auto; /* タップ可能にする */
     z-index: 10;
     /* 長文対応の改善 */
     max-width: calc(100vw - 40px);
@@ -85,6 +100,72 @@ body {
     align-items: center;
     justify-content: center;
     text-align: center;
+    /* ドラッグ可能スタイル */
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    /* タッチ領域の最小サイズ確保 */
+    min-height: 44px;
+    min-width: 44px;
+    /* タッチハイライトを無効化 */
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+}
+
+.message-firework:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.message-firework:active {
+    cursor: grabbing;
+}
+
+.message-firework.dragging {
+    z-index: 1000;
+    transform: scale(1.1);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+}
+
+/* ドラッグ済みメッセージのスタイル */
+.message-firework[data-dragged="true"] {
+    border: 3px dashed rgba(255, 255, 255, 0.8) !important;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.4), 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+    position: relative;
+    cursor: pointer !important;
+}
+
+.message-firework[data-dragged="true"]::before {
+    content: "タップで削除";
+    position: absolute;
+    top: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    white-space: nowrap;
+    opacity: 0.8;
+    animation: deleteHint 2s ease-in-out infinite;
+}
+
+@keyframes deleteHint {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+}
+
+/* 削除アイコンのスタイル */
+.delete-indicator {
+    animation: deleteIconPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes deleteIconPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
 }
 
 /* 入力セクション */
@@ -93,6 +174,13 @@ body {
     background: rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(15px);
     border-top: 1px solid rgba(255, 255, 255, 0.3);
+    /* モバイル対応 */
+    position: relative;
+    bottom: 0;
+    width: 100%;
+    z-index: 100;
+    /* セーフエリア対応 */
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
 }
 
 .input-container {
@@ -107,9 +195,12 @@ body {
     border: 2px solid rgba(255, 255, 255, 0.3);
     border-radius: 25px;
     font-size: 1rem;
-    outline: none;
-    background: rgba(255, 255, 255, 0.9);
+    outline: none;    background: rgba(255, 255, 255, 0.9);
     transition: all 0.3s ease;
+    /* iOS での自動ズーム防止 */
+    -webkit-appearance: none;
+    appearance: none;
+    border-radius: 25px; /* iOSのデフォルトスタイルを上書き */
 }
 
 #messageInput:focus {
@@ -123,10 +214,13 @@ body {
     border-radius: 25px;
     background: linear-gradient(45deg, #667eea, #764ba2);
     color: white;
-    font-size: 1rem;
-    font-weight: bold;
+    font-size: 1rem;    font-weight: bold;
     cursor: pointer;
     transition: all 0.3s ease;
+    /* iOS での外観調整 */
+    -webkit-appearance: none;
+    appearance: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .send-btn:hover {
@@ -141,9 +235,12 @@ body {
     background: linear-gradient(45deg, #f093fb, #f5576c);
     color: white;
     font-size: 1rem;
-    font-weight: bold;
-    cursor: pointer;
+    font-weight: bold;    cursor: pointer;
     transition: all 0.3s ease;
+    /* iOS での外観調整 */
+    -webkit-appearance: none;
+    appearance: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .gift-btn:hover {
@@ -251,37 +348,36 @@ body {
     animation: bounce 1s ease-in-out;
 }
 
-/* レスポンシブデザイン */
-@media (max-width: 480px) {
-    .app-container {
-        max-width: 100%;
-        margin: 0;
-    }
-      .header h1 {
-        font-size: 1.3rem;
-    }
-    
-    .input-container {
-        flex-direction: column;
-        gap: 10px;
-    }
-    
-    #messageInput {
-        width: 100%;
-        font-size: 0.9rem;
-    }
-    
-    .send-btn, .gift-btn {
-        width: 100%;
-        font-size: 0.9rem;
-        padding: 12px 16px;
-    }
-    
-    .message-firework {
-        font-size: 0.9rem;
-        padding: 8px 14px;
-        max-width: calc(100vw - 20px) !important;
-    }
+/* モバイルデバイス対応の追加スタイル */
+html {
+    /* iOS Safariでのビューポート設定 */
+    height: 100%;
+    height: 100dvh;
+    overflow: hidden;
+}
+
+/* セーフエリア対応 */
+body {
+    /* セーフエリア対応のパディング */
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+}
+
+/* iOS対応の追加設定 */
+.app-container {
+    /* iOS Safariでの高さ調整 */
+    min-height: -webkit-fill-available;
+}
+
+/* メッセージのタッチ対応強化 */
+.message-firework {
+    /* タッチ領域の最小サイズ確保 */
+    min-height: 44px;
+    min-width: 44px;
+    /* タッチハイライトを無効化 */
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
 }
 
 /* タブレット向け調整 */
@@ -289,14 +385,29 @@ body {
     .app-container {
         max-width: 100%;
         margin: 0;
+        height: 100vh;
+        height: 100dvh;
     }
     
     .header h1 {
         font-size: 1.6rem;
     }
-      .message-firework {
+    
+    .input-section {
+        padding: 20px;
+        padding-bottom: max(20px, env(safe-area-inset-bottom));
+    }
+    
+    #messageInput {
+        font-size: 16px; /* iOS zoom 防止 */
+    }
+      
+    .message-firework {
         font-size: 1rem;
-        max-width: calc(100vw - 40px) !important;
+        max-width: calc(100vw - 60px) !important;
+        /* タブレットでのメッセージ位置調整 */
+        left: 50% !important;
+        transform: translateX(-50%);
     }
 }
 

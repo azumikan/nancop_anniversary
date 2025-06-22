@@ -100,6 +100,7 @@ const gradients = [
 
 // アプリケーション初期化
 document.addEventListener('DOMContentLoaded', function() {
+    setupMobileOptimizations();
     initializeApp();
     setupEventListeners();
 });
@@ -114,6 +115,9 @@ function initializeApp() {
     }
     
     console.log('初期化:', { API_BASE_URL, hasApiKey: !!API_KEY });
+    
+    // GSAPプラグインを登録
+    gsap.registerPlugin(Draggable);
     
     // 即座にローディング表示を開始
     showLoadingIndicator();
@@ -290,14 +294,30 @@ function createFireworkMessage(message) {
     firework.style.maxWidth = maxWidth + 'px';
     
     // 画面の下部からランダムな横位置でスタート（マージンを考慮）
+    // モバイル対応：メッセージを中央寄りに配置
     const margin = screenWidth > 768 ? 100 : 30;
-    const startX = Math.random() * (screenWidth - maxWidth - margin * 2) + margin;
+    let startX;
+    
+    if (screenWidth <= 768) {
+        // モバイル・タブレット：画面中央寄りに配置
+        const centerX = screenWidth / 2;
+        const range = Math.min(screenWidth * 0.3, 150); // 中央から左右150px以内
+        startX = centerX + (Math.random() - 0.5) * range - maxWidth / 2;
+        startX = Math.max(margin, Math.min(startX, screenWidth - maxWidth - margin));
+    } else {
+        // デスクトップ：従来通り
+        startX = Math.random() * (screenWidth - maxWidth - margin * 2) + margin;
+    }
+    
     const startY = window.innerHeight;
     
     firework.style.left = startX + 'px';
     firework.style.bottom = '0px';
     
     fireworksArea.appendChild(firework);
+    
+    // ドラッグ機能を追加
+    makeDraggable(firework);
     
     // 花火のような軌道でアニメーション（横移動を控えめに）
     const endX = startX + (Math.random() - 0.5) * 80; // 横移動を80pxに制限
@@ -1251,4 +1271,349 @@ async function loadExistingMessages() {
         clearLoadingIndicator();
         displayWelcomeMessage();
     }
+}
+
+// メッセージを削除するエフェクト付き関数
+function removeMessageWithEffect(element) {
+    // 削除エフェクト：爆発のようなアニメーション
+    createRemovalExplosion(element);
+    
+    // 要素を縮小して透明化
+    gsap.to(element, {
+        scale: 0,
+        opacity: 0,
+        rotation: Math.random() * 360,
+        duration: 0.8,
+        ease: "back.in(1.7)",
+        onComplete: () => {
+            // DOM から削除
+            if (element.parentNode) {
+                element.parentNode.removeChild(element);
+            }
+            // activeFireworks 配列からも削除
+            const index = activeFireworks.indexOf(element);
+            if (index > -1) {
+                activeFireworks.splice(index, 1);
+            }
+        }
+    });
+    
+    // 削除音の代わりにサウンドエフェクト（視覚的）
+    createSoundWaveEffect(element);
+}
+
+// 削除時の爆発エフェクト
+function createRemovalExplosion(element) {
+    const explosionEmojis = ['💥', '✨', '🌟', '💫', '⭐', '🎆', '🎇', '💢'];
+    const particleCount = 8;
+    
+    const rect = element.getBoundingClientRect();
+    const containerRect = fireworksArea.getBoundingClientRect();
+    
+    const centerX = rect.left - containerRect.left + rect.width / 2;
+    const centerY = rect.top - containerRect.top + rect.height / 2;
+    
+    for (let i = 0; i < particleCount; i++) {
+        const particle = document.createElement('div');
+        particle.textContent = explosionEmojis[Math.floor(Math.random() * explosionEmojis.length)];
+        particle.style.position = 'absolute';
+        particle.style.pointerEvents = 'none';
+        particle.style.fontSize = '20px';
+        particle.style.zIndex = '1500';
+        particle.style.left = centerX + 'px';
+        particle.style.top = centerY + 'px';
+        particle.style.transform = 'translate(-50%, -50%)';
+        
+        fireworksArea.appendChild(particle);
+        
+        // 放射状に散らばるアニメーション
+        const angle = (Math.PI * 2 * i) / particleCount;
+        const distance = Math.random() * 80 + 60;
+        const targetX = Math.cos(angle) * distance;
+        const targetY = Math.sin(angle) * distance;
+        
+        gsap.fromTo(particle, {
+            scale: 0,
+            opacity: 1
+        }, {
+            scale: [1.5, 0],
+            opacity: [1, 0],
+            x: targetX,
+            y: targetY,
+            rotation: Math.random() * 720,
+            duration: 1.2,
+            ease: "power2.out",
+            onComplete: () => particle.remove()
+        });
+    }
+}
+
+// 削除確認のための視覚的フィードバック強化
+function enhanceDraggedMessageAppearance(element) {
+    // ドラッグ済みメッセージの外観を変更
+    gsap.to(element, {
+        borderWidth: '3px',
+        borderStyle: 'dashed',
+        borderColor: 'rgba(255, 255, 255, 0.8)',
+        duration: 0.5,
+        ease: "power2.out"
+    });
+    
+    // 削除可能であることを示すアイコンを追加
+    const deleteIcon = document.createElement('span');
+    deleteIcon.textContent = '❌';
+    deleteIcon.style.position = 'absolute';
+    deleteIcon.style.top = '-5px';
+    deleteIcon.style.right = '-5px';
+    deleteIcon.style.fontSize = '14px';
+    deleteIcon.style.background = 'rgba(255, 255, 255, 0.9)';
+    deleteIcon.style.borderRadius = '50%';
+    deleteIcon.style.width = '20px';
+    deleteIcon.style.height = '20px';
+    deleteIcon.style.display = 'flex';
+    deleteIcon.style.alignItems = 'center';
+    deleteIcon.style.justifyContent = 'center';
+    deleteIcon.style.pointerEvents = 'none';
+    deleteIcon.style.zIndex = '1';
+    deleteIcon.className = 'delete-indicator';
+    
+    element.appendChild(deleteIcon);
+    
+    // アイコンをアニメーション
+    gsap.fromTo(deleteIcon, {
+        scale: 0,
+        opacity: 0
+    }, {
+        scale: 1,
+        opacity: 1,
+        duration: 0.3,
+        ease: "back.out(1.7)"
+    });
+}
+
+// ドラッグ機能を追加する関数
+function makeDraggable(element) {
+    let isDragged = false; // ドラッグされたかどうかを追跡
+    let dragDistance = 0; // ドラッグ距離を追跡
+    
+    // ドラッグ可能にする
+    Draggable.create(element, {
+        type: "x,y",
+        bounds: fireworksArea, // 花火エリア内に制限
+        inertia: true, // 慣性を有効にする
+        throwProps: true, // 投げる動作を有効にする
+        edgeResistance: 0.8, // 境界での抵抗
+        onDragStart: function() {
+            // ドラッグ開始時
+            element.classList.add('dragging');
+            gsap.to(element, { scale: 1.1, duration: 0.2 });
+            // 自動アニメーションを停止
+            gsap.killTweensOf(element);
+            dragDistance = 0; // ドラッグ距離をリセット
+        },
+        onDrag: function() {
+            // ドラッグ中のスパークルエフェクト
+            if (Math.random() < 0.3) { // 30%の確率でスパークル
+                createDragSparkle(element);
+            }
+            // ドラッグ距離を計算
+            dragDistance += Math.abs(this.deltaX) + Math.abs(this.deltaY);
+        },
+        onDragEnd: function() {
+            // ドラッグ終了時
+            element.classList.remove('dragging');
+            gsap.to(element, { scale: 1, duration: 0.3 });
+            
+            // 一定距離以上ドラッグされた場合のみ「ドラッグ済み」とマーク
+            if (dragDistance > 10) { // 10px以上ドラッグされた場合
+                isDragged = true;
+                element.setAttribute('data-dragged', 'true');
+                // ドラッグ済みの視覚的な表示を強化
+                enhanceDraggedMessageAppearance(element);
+            }
+            
+            // バウンス効果
+            gsap.to(element, {
+                rotation: Math.random() * 20 - 10,
+                duration: 0.5,
+                ease: "elastic.out(1, 0.3)"
+            });
+            
+            // スパークルエフェクト
+            createSparkleAtPosition(element);
+        },
+        onClick: function(e) {
+            // クリック/タップ時の処理
+            e.preventDefault();
+            
+            // ドラッグ済みの要素がクリックされた場合は削除
+            if (isDragged || element.getAttribute('data-dragged') === 'true') {
+                removeMessageWithEffect(element);
+            } else {
+                // 通常のタップエフェクト
+                createTapEffect(element);
+            }
+        }
+    });
+    
+    // タッチデバイス対応
+    element.addEventListener('touchstart', function(e) {
+        e.preventDefault(); // デフォルトのタッチ動作を防ぐ
+    }, { passive: false });
+}
+
+// ドラッグ中のスパークルエフェクト
+function createDragSparkle(element) {
+    const sparkle = document.createElement('div');
+    sparkle.textContent = '✨';
+    sparkle.style.position = 'absolute';
+    sparkle.style.pointerEvents = 'none';
+    sparkle.style.fontSize = '12px';
+    sparkle.style.zIndex = '999';
+    
+    const rect = element.getBoundingClientRect();
+    const containerRect = fireworksArea.getBoundingClientRect();
+    
+    sparkle.style.left = (rect.left - containerRect.left + Math.random() * rect.width) + 'px';
+    sparkle.style.top = (rect.top - containerRect.top + Math.random() * rect.height) + 'px';
+    
+    fireworksArea.appendChild(sparkle);
+    
+    gsap.fromTo(sparkle, {
+        scale: 0,
+        opacity: 1
+    }, {
+        scale: 1.5,
+        opacity: 0,
+        y: -20,
+        duration: 0.8,
+        ease: "power2.out",
+        onComplete: () => sparkle.remove()
+    });
+}
+
+// 指定位置でのスパークルエフェクト
+function createSparkleAtPosition(element) {
+    const sparkles = ['✨', '⭐', '💫', '🌟'];
+    const sparkleCount = 3;
+    
+    for (let i = 0; i < sparkleCount; i++) {
+        setTimeout(() => {
+            const sparkle = document.createElement('div');
+            sparkle.textContent = sparkles[Math.floor(Math.random() * sparkles.length)];
+            sparkle.style.position = 'absolute';
+            sparkle.style.pointerEvents = 'none';
+            sparkle.style.fontSize = '16px';
+            sparkle.style.zIndex = '1000';
+            
+            const rect = element.getBoundingClientRect();
+            const containerRect = fireworksArea.getBoundingClientRect();
+            
+            sparkle.style.left = (rect.left - containerRect.left + rect.width / 2) + 'px';
+            sparkle.style.top = (rect.top - containerRect.top + rect.height / 2) + 'px';
+            
+            fireworksArea.appendChild(sparkle);
+            
+            const angle = (Math.PI * 2 * i) / sparkleCount;
+            const distance = 30;
+            const targetX = Math.cos(angle) * distance;
+            const targetY = Math.sin(angle) * distance;
+            
+            gsap.fromTo(sparkle, {
+                scale: 0,
+                opacity: 0
+            }, {
+                scale: 1.5,
+                opacity: 1,
+                x: targetX,
+                y: targetY,
+                duration: 0.3,
+                ease: "power2.out",
+                onComplete: () => {
+                    gsap.to(sparkle, {
+                        opacity: 0,
+                        scale: 0.5,
+                        duration: 0.5,
+                        onComplete: () => sparkle.remove()
+                    });
+                }
+            });
+        }, i * 100);
+    }
+}
+
+// タップエフェクト
+function createTapEffect(element) {
+    const tapEffect = document.createElement('div');
+    tapEffect.style.position = 'absolute';
+    tapEffect.style.pointerEvents = 'none';
+    tapEffect.style.border = '2px solid rgba(255, 255, 255, 0.8)';
+    tapEffect.style.borderRadius = '50%';
+    tapEffect.style.zIndex = '999';
+    
+    const rect = element.getBoundingClientRect();
+    const containerRect = fireworksArea.getBoundingClientRect();
+    
+    const centerX = rect.left - containerRect.left + rect.width / 2;
+    const centerY = rect.top - containerRect.top + rect.height / 2;
+    
+    tapEffect.style.left = centerX + 'px';
+    tapEffect.style.top = centerY + 'px';
+    tapEffect.style.transform = 'translate(-50%, -50%)';
+    
+    fireworksArea.appendChild(tapEffect);
+    
+    gsap.fromTo(tapEffect, {
+        width: '0px',
+        height: '0px',
+        opacity: 1
+    }, {
+        width: '50px',
+        height: '50px',
+        opacity: 0,
+        duration: 0.6,
+        ease: "power2.out",
+        onComplete: () => tapEffect.remove()
+    });
+    
+    // 要素を少し揺らす
+    gsap.to(element, {
+        rotation: Math.random() * 10 - 5,
+        scale: 1.1,
+        duration: 0.1,
+        yoyo: true,
+        repeat: 1,
+        ease: "power2.inOut"
+    });
+}
+
+// モバイルデバイス対応の初期設定
+function setupMobileOptimizations() {
+    // ビューポートメタタグの動的調整
+    let viewport = document.querySelector('meta[name="viewport"]');
+    if (viewport) {
+        viewport.setAttribute('content', 
+            'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover'
+        );
+    }
+    
+    // モバイルでのスクロール防止
+    document.body.addEventListener('touchmove', function(e) {
+        e.preventDefault();
+    }, { passive: false });
+    
+    // モバイルでの拡大防止
+    document.addEventListener('gesturestart', function(e) {
+        e.preventDefault();
+    });
+    
+    // iOS Safariのバウンススクロール防止
+    document.addEventListener('touchstart', function(e) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') {
+            return; // 入力要素とボタンは除外
+        }
+        if (e.touches.length > 1) {
+            e.preventDefault();
+        }
+    }, { passive: false });
 }
