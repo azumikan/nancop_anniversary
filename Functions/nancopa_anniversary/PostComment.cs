@@ -9,18 +9,18 @@ namespace Nancopa;
 
 public class PostComment
 {
+    private const int MaxMessageLength = 600;
     private readonly ILogger<PostComment> _logger;
 
     public PostComment(ILogger<PostComment> logger)
     {
         _logger = logger;
-    }    
-        [Function("PostComment")]
+    }
+    
+    [Function("PostComment")]
     public async Task<MultiResponse> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", "options")] HttpRequest req)
     {
         _logger.LogInformation("C# HTTP trigger function processed a request.");
-
-        
 
         // POSTリクエストの場合、リクエストボディからメッセージを取得
         if (req.Method == "POST")
@@ -32,10 +32,11 @@ public class PostComment
                 
                 if (requestData != null && requestData.ContainsKey("message"))
                 {
+                    var message = requestData["message"]?.ToString() ?? "";
                     var comment = new Comment
                     {
                         Id = Guid.NewGuid().ToString(),
-                        Message = requestData["message"].ToString() ?? "",
+                        Message = message[0.. (message.Length < MaxMessageLength ? message.Length : MaxMessageLength)],
                         Timestamp = DateTime.UtcNow,
                         Year = DateTime.UtcNow.Year
                     };
